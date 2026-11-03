@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#081e22">
+<meta name="description" content="Interaktives Zuordnungsspiel zum Energiefluss beim Fahrradfahren mit Leistungsdiagramm (25–500 W), 60-Sekunden-Messung sowie Jahres-Hochrechnung für Verbrauch und Kosten.">
+<title>Energiefluss beim Fahrradfahren – Zuordnungsspiel</title>
+<style>
+  :root{
+    --ink:#eef7f2;
+    --text:#c3d8d2;
+    --muted:#8fa9a4;
+    --line:#1b444a;
+    --green:#c9f36a;
+    --green-dark:#a7d94a;
+    --teal:#5fe3c0;
+    --lime:#c9f36a;
+    --lime-bright:#e4ff9b;
+    --lime-dim:rgba(201,243,106,.14);
+    --petrol-0:#05191d;
+    --petrol-1:#081e22;
+    --petrol-2:#0a2429;
+    --petrol-3:#0c2d32;
+    --white:#eef7f2;
+    --shadow:0 24px 60px rgba(0,0,0,.45);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;}
+  html{background:#081e22;}
+  body{
+    font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);
+    background-color:#081e22;
+    background-image:
+      radial-gradient(900px 560px at 5% -8%, rgba(201,243,106,.10) 0%, rgba(201,243,106,0) 60%),
+      radial-gradient(820px 520px at 104% 0%, rgba(21,164,208,.16) 0%, rgba(21,164,208,0) 58%),
+      radial-gradient(circle at 1px 1px, rgba(201,243,106,.07) 1px, transparent 0);
+    background-size:auto,auto,26px 26px;
+    padding:28px 20px 40px;
+    -webkit-font-smoothing:antialiased;
+    color-scheme:dark;
+  }
+
+  button{font:inherit;}
+  .app{max-width:1180px;margin:0 auto;}
+
+  /* ---------- Kopfbereich ---------- */
+  .topbar{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 314px;
+    gap:26px;
+    align-items:end;
+    margin-bottom:18px;
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:#d9ff8a;background:rgba(201,243,106,.10);border:1px solid rgba(201,243,106,.30);
+    padding:6px 10px;border-radius:999px;margin-bottom:11px;
+    box-shadow:0 0 20px rgba(201,243,106,.08);
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:#c9f36a;box-shadow:0 0 0 3px rgba(201,243,106,.16),0 0 12px rgba(201,243,106,.7);}
+  .intro h1{
+    margin:0 0 7px;
+    font-size:clamp(25px,3.1vw,35px);
+    line-height:1.08;
+    letter-spacing:-.035em;
+    font-weight:800;
+    color:var(--ink);
+  }
+  .intro p{
+    margin:0;max-width:65ch;
+    color:#a9c0ba;font-size:14.5px;line-height:1.55;
+  }
+  .intro p b{color:#d9ff8a;font-weight:700;}
+
+  .hud{
+    background:rgba(10,36,41,.78);
+    border:1px solid rgba(201,243,106,.16);
+    border-radius:20px;
+    padding:14px 16px 13px;
+    box-shadow:0 8px 26px rgba(0,0,0,.28),inset 0 1px 0 rgba(201,243,106,.08);
+    backdrop-filter:blur(10px);
+  }
+  .hud-score{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;}
+  .score-value{
+    display:flex;align-items:baseline;gap:1px;
+    font-size:36px;font-weight:800;letter-spacing:-.05em;line-height:.95;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .score-value small{font-size:14px;font-weight:700;letter-spacing:-.01em;color:#7f9a95;}
+  .score-value.bump{animation:scoreBump .35s ease;}
+  .score-meta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;padding-bottom:2px;}
+  .score-meta span{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#8fa9a4;}
+  .score-meta b{font-size:12px;font-weight:700;color:#c3d8d2;white-space:nowrap;}
+  .progress{
+    height:7px;border-radius:999px;background:#06191d;overflow:hidden;margin:12px 0 9px;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.45);
+  }
+  .progress span{
+    display:block;height:100%;width:0%;border-radius:inherit;
+    background:linear-gradient(90deg,#a7d94a,#d9ff8a);
+    box-shadow:0 0 12px rgba(201,243,106,.55);
+    transition:width .5s cubic-bezier(.2,.8,.2,1);
+  }
+  .hud-stats{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;color:#8fa9a4;}
+  .hud-stats span{display:inline-flex;align-items:center;gap:5px;}
+  .hud-stats b{color:#e3f1ec;font-variant-numeric:tabular-nums;}
+  .mini-ico{width:13px;height:13px;flex:0 0 auto;}
+  .mini-ico.ok{color:#c9f36a;}
+  .mini-ico.warn{color:#f3c969;}
+
+  /* ---------- Spielfläche ---------- */
+  .board{
+    background:linear-gradient(180deg,#0b282d 0%,#081e22 58%,#071c20 100%);
+    border:1px solid #1b444a;
+    border-radius:26px;
+    padding:16px;
+    box-shadow:var(--shadow),inset 0 1px 0 rgba(201,243,106,.10);
+  }
+  .stage-scroll{
+    width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    border-radius:18px;
+    scrollbar-width:thin;
+    scrollbar-color:#2a5a60 transparent;
+  }
+  .stage{
+    position:relative;
+    width:100%;
+    min-width:0;
+    aspect-ratio:1100 / 660;
+    border-radius:18px;
+    overflow:hidden;
+    background:#06191d;
+    isolation:isolate;
+    container-type:inline-size;
+    touch-action:manipulation;
+    box-shadow:inset 0 0 60px rgba(0,0,0,.35);
+  }
+  .scene{display:block;width:100%;height:100%;}
+  .zones{position:absolute;inset:0;}
+
+  /* ---------- Rückmeldung ---------- */
+  .feedback{
+    display:flex;align-items:center;gap:11px;
+    margin-top:14px;padding:10px 14px;min-height:48px;
+    border-radius:14px;border:1px solid #1b444a;background:#0a2429;
+    color:#b8cec8;font-size:13px;line-height:1.4;
+    transition:background .25s,border-color .25s,color .25s;
+  }
+  .feedback p{margin:0;}
+  .feedback[data-tone="good"]{background:rgba(201,243,106,.10);border-color:rgba(201,243,106,.38);color:#dfff9f;}
+  .feedback[data-tone="bad"]{background:rgba(255,123,107,.10);border-color:rgba(255,123,107,.40);color:#ffc0b8;}
+  .status-icon{
+    width:25px;height:25px;flex:0 0 auto;border-radius:50%;
+    display:grid;place-items:center;
+    background:#173a3f;color:#b8cec8;
+    font-size:13px;font-weight:800;line-height:1;
+    transition:background .25s,color .25s;
+  }
+  .feedback[data-tone="good"] .status-icon{background:#c9f36a;color:#08210f;box-shadow:0 0 14px rgba(201,243,106,.35);}
+  .feedback[data-tone="bad"] .status-icon{background:#ff8b7a;color:#2a0906;}
+
+  /* ---------- Begriffe ---------- */
+  .play-layout{
+    display:grid;
+    grid-template-columns:minmax(0,2fr) minmax(270px,1fr);
+    gap:16px;
+    align-items:stretch;
+  }
+  .play-layout.single{grid-template-columns:minmax(0,1fr);}
+  .play-main{min-width:0;}
+  .tray{
+    display:flex;flex-direction:column;
+    margin-top:0;
+    padding:14px;
+    border:1px solid #1b444a;
+    border-radius:18px;
+    background:linear-gradient(180deg,rgba(12,45,50,.78),rgba(8,30,34,.55));
+    box-shadow:inset 0 1px 0 rgba(201,243,106,.08),0 12px 30px rgba(0,0,0,.20);
+  }
+  .tray.hidden{display:none;}
+  .tray-head{display:flex;flex-direction:column;align-items:stretch;gap:10px;margin-bottom:12px;}
+  .tray-title{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#d9ff8a;}
+  .tray-title::before{
+    content:"";display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:#c9f36a;margin-right:7px;vertical-align:1px;
+    box-shadow:0 0 9px rgba(201,243,106,.75);
+  }
+  .tray-sub{display:block;font-size:12px;color:#a9c0ba;margin:4px 0 0;line-height:1.35;}
+  .tray-actions{display:flex;gap:8px;flex:0 0 auto;}
+  .tray-actions .btn{flex:1 1 0;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    border:1px solid transparent;border-radius:10px;
+    padding:7px 11px;font-size:12.5px;font-weight:700;
+    cursor:pointer;text-decoration:none;white-space:nowrap;
+    transition:background .18s,border-color .18s,color .18s,transform .18s,box-shadow .18s;
+  }
+  .btn svg{width:15px;height:15px;flex:0 0 auto;}
+  .btn-ghost{background:#0c2d32;border-color:#245158;color:#c3d8d2;}
+  .btn-ghost:hover{background:#10383e;border-color:#c9f36a;color:#eef7f2;box-shadow:0 0 16px rgba(201,243,106,.14);}
+  .btn-primary{background:linear-gradient(135deg,#d9ff8a,#a7d94a);color:#08210f;padding:10px 15px;font-size:13px;box-shadow:0 8px 18px rgba(201,243,106,.20),0 0 24px rgba(201,243,106,.12);}
+  .btn-primary:hover{background:linear-gradient(135deg,#e4ff9b,#b9ec5a);transform:translateY(-1px);box-shadow:0 11px 24px rgba(201,243,106,.26),0 0 30px rgba(201,243,106,.18);}
+  .btn:active{transform:translateY(0);}
+  .btn:focus-visible{outline:3px solid #e4ff9b;outline-offset:2px;}
+
+  .chips{display:grid;grid-template-columns:1fr;gap:9px;align-content:start;flex:1 1 auto;}
+  .chips.nudge{animation:nudge .45s ease;}
+  .chip{
+    --c:#c9f36a;
+    --soft:rgba(201,243,106,.14);
+    display:flex;align-items:center;gap:10px;
+    width:100%;min-width:0;
+    padding:8px 12px 8px 8px;
+    background:#0c2d32;
+    border:1.5px solid #245158;
+    border-radius:14px;
+    box-shadow:0 3px 10px rgba(0,0,0,.25);
+    text-align:left;
+    cursor:grab;
+    touch-action:none;
+    user-select:none;
+    -webkit-user-select:none;
+    transition:transform .18s,box-shadow .18s,border-color .18s,opacity .18s;
+  }
+  .chip:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.35),0 0 18px rgba(201,243,106,.06);border-color:#3d7a72;}
+  .chip:focus-visible{outline:3px solid #e4ff9b;outline-offset:2px;}
+  .chip.selected{
+    border-color:var(--c);
+    box-shadow:0 0 0 3px var(--soft),0 8px 22px rgba(0,0,0,.35),0 0 26px var(--soft);
+    transform:translateY(-2px);
+  }
+  .chip .ico{
+    width:37px;height:37px;flex:0 0 auto;border-radius:11px;
+    display:grid;place-items:center;
+    background:var(--soft);color:var(--c);
+  }
+  .chip .ico svg{width:21px;height:21px;display:block;}
+  .chip-text{display:flex;flex-direction:column;gap:1px;min-width:0;line-height:1.15;}
+  .chip-text strong{font-size:13.5px;font-weight:750;color:#eef7f2;letter-spacing:-.01em;}
+  .chip-text span{
+    font-size:11px;color:#9fb8b2;line-height:1.25;
+    overflow-wrap:break-word;
+  }
+  .chip.is-dragging{opacity:.25;}
+  .chip.ghost{
+    position:fixed;left:0;top:0;z-index:9999;
+    display:flex;pointer-events:none;
+    margin:0;padding:8px 12px 8px 8px;
+    max-width:280px;min-width:0;
+    background:#0c2d32;
+    box-shadow:0 20px 44px rgba(0,0,0,.55),0 0 30px rgba(201,243,106,.10);
+    transform:translate(-50%,-50%) rotate(-2deg) scale(1.04);
+    opacity:.98;cursor:grabbing;
+    transition:none;
+  }
+  .chip.hint{animation:hintChip 1.15s ease 2;}
+
+  /* ---------- Ablagefelder ---------- */
+  .zone{
+    --c:#c9f36a;
+    --soft:rgba(201,243,106,.14);
+    position:absolute;
+    display:flex;align-items:center;justify-content:center;
+    padding:9px 11px;
+    border:2px dashed #3e6b6f;
+    border-radius:16px;
+    background:rgba(6,25,29,.72);
+    backdrop-filter:blur(5px);
+    box-shadow:0 4px 14px rgba(0,0,0,.22);
+    cursor:pointer;
+    transform-origin:center;
+    transition:border-color .2s,background .2s,box-shadow .2s,transform .2s;
+    overflow:visible;
+  }
+  .zone:not(.solved):hover{
+    border-color:var(--c);
+    background:rgba(12,45,50,.94);
+    transform:scale(1.015);
+    box-shadow:0 0 22px var(--soft);
+  }
+  .zone.over{
+    border-style:solid;
+    border-color:var(--c);
+    background:rgba(12,45,50,.98);
+    box-shadow:0 0 0 4px var(--soft),0 10px 24px rgba(0,0,0,.4),0 0 32px var(--soft);
+    transform:scale(1.03);
+  }
+  .zone.wrong{
+    border-color:#ff7b6b;
+    background:rgba(255,123,107,.12);
+    animation:shake .45s ease;
+  }
+  .zone.hint{animation:hintZone 1.15s ease 2;}
+  .zone:focus-visible{outline:3px solid #e4ff9b;outline-offset:3px;}
+  .zone.solved{
+    border-style:solid;
+    border-color:#c9f36a;
+    background:linear-gradient(180deg,rgba(201,243,106,.16),rgba(201,243,106,.06));
+    box-shadow:0 8px 24px rgba(0,0,0,.30),0 0 28px rgba(201,243,106,.16);
+    cursor:default;
+  }
+  .zone.solved:hover{transform:none;}
+  .zone.solved .zone-inner,
+  .zone.solved .zone-ghost{display:none;}
+  .zone-inner{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    text-align:center;pointer-events:none;min-width:0;
+  }
+  .zone-num{
+    position:absolute;top:-11px;left:-11px;
+    width:25px;height:25px;border-radius:50%;
+    display:grid;place-items:center;
+    background:#0a2429;border:2px solid #3e6b6f;
+    color:#b8cec8;font-size:11px;font-weight:800;
+    box-shadow:0 2px 6px rgba(0,0,0,.35);
+    z-index:2;
+  }
+  .zone-hint{
+    font-size:12px;font-size:clamp(11px,1.16cqw,13.5px);
+    font-weight:800;letter-spacing:.10em;text-transform:uppercase;color:#c3d8d2;
+    line-height:1.1;
+  }
+  .zone-drop{
+    font-size:10.5px;font-size:clamp(9px,1cqw,12px);
+    color:#7f9a95;line-height:1.2;
+  }
+  .zone-ghost{
+    position:absolute;right:7px;bottom:4px;
+    width:54px;height:54px;color:var(--c);opacity:.12;
+    pointer-events:none;
+  }
+  .zone-ghost svg{width:100%;height:100%;display:block;}
+  .zone .chip.placed{
+    display:flex;flex:1 1 auto;width:100%;height:100%;min-width:0;max-width:none;
+    padding:3px 2px;margin:0;
+    background:transparent;border:0;border-radius:0;box-shadow:none;
+    cursor:default;transform:none;
+    animation:placedIn .3s ease both;
+  }
+  .zone .chip.placed:hover{transform:none;box-shadow:none;border:0;}
+  .zone .chip.placed .ico{width:31px;height:31px;border-radius:9px;}
+  .zone .chip.placed .ico svg{width:18px;height:18px;}
+  .zone .chip.placed .chip-text strong{font-size:12.5px;font-size:clamp(10.5px,1.12cqw,13.5px);}
+  .zone .chip.placed .chip-text span{font-size:10.5px;font-size:clamp(9px,.94cqw,11.5px);}
+  .zone.solved .zone-num{border-color:#c9f36a;color:#d9ff8a;}
+
+  .ok-badge{
+    position:absolute;top:-13px;right:-13px;z-index:3;
+    width:34px;height:34px;
+    display:grid;place-items:center;
+    border-radius:50% 50% 50% 7px;
+    background:linear-gradient(135deg,#e4ff9b,#a7d94a);
+    color:#08210f;
+    box-shadow:0 7px 16px rgba(0,0,0,.4),0 0 22px rgba(201,243,106,.5);
+    opacity:0;transform:scale(0) rotate(-25deg);
+    pointer-events:none;
+  }
+  .ok-badge svg{width:19px;height:19px;stroke:#08210f;stroke-width:3.2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+  .zone.solved .ok-badge{animation:badgePop .55s cubic-bezier(.2,1.5,.4,1) .06s forwards;}
+  .zone.solved::after{
+    content:"";position:absolute;inset:-7px;border-radius:22px;
+    border:2px solid rgba(201,243,106,.40);
+    animation:successRing 1.1s ease-out .08s forwards;
+    pointer-events:none;
+  }
+
+  /* ---------- Partikel & Punkte ---------- */
+  .fx{position:absolute;inset:0;z-index:20;pointer-events:none;overflow:hidden;}
+  .float-points{
+    position:absolute;transform:translate(-50%,-50%);
+    font-size:18px;font-weight:800;letter-spacing:-.02em;
+    text-shadow:0 2px 10px rgba(0,0,0,.7);
+    animation:floatUp 1.1s ease-out forwards;
+    pointer-events:none;white-space:nowrap;
+  }
+  .float-points.good{color:#d9ff8a;}
+  .float-points.bad{color:#ff9b8a;}
+  .confetti{
+    position:absolute;width:8px;height:8px;border-radius:2px;
+    top:48%;left:50%;opacity:0;pointer-events:none;
+    animation:confettiFly 1.35s cubic-bezier(.15,.65,.4,1) forwards;
+  }
+
+  /* ---------- Auswertung ---------- */
+  .result{
+    display:flex;align-items:center;gap:16px;
+    margin-top:14px;padding:15px 16px;
+    border:1px solid rgba(201,243,106,.38);border-radius:18px;
+    background:linear-gradient(135deg,rgba(201,243,106,.13) 0%,#0a2429 68%,#081e22 100%);
+    box-shadow:0 10px 30px rgba(0,0,0,.30),0 0 40px rgba(201,243,106,.08);
+    animation:slideUp .42s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .result.hidden{display:none;}
+  .result-icon{
+    width:52px;height:52px;flex:0 0 auto;border-radius:16px;
+    display:grid;place-items:center;
+    background:linear-gradient(135deg,#e4ff9b,#a7d94a);
+    color:#08210f;box-shadow:0 10px 22px rgba(0,0,0,.35),0 0 26px rgba(201,243,106,.28);
+  }
+  .result-icon svg{width:27px;height:27px;stroke:#08210f;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+  .result-main{flex:1 1 auto;min-width:0;}
+  .result-kicker{font-size:9.5px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#c9f36a;}
+  .result h2{margin:2px 0 4px;font-size:19px;letter-spacing:-.02em;color:#eef7f2;}
+  .result p{margin:0;font-size:12.5px;line-height:1.5;color:#b8cec8;max-width:66ch;}
+  .balance{margin-top:9px;max-width:430px;}
+  .balance-bar{height:9px;border-radius:999px;overflow:hidden;display:flex;background:#06191d;box-shadow:inset 0 1px 2px rgba(0,0,0,.5);}
+  .balance-bar .useful{width:23%;background:linear-gradient(90deg,#a7d94a,#d9ff8a);}
+  .balance-bar .loss{flex:1;background:linear-gradient(90deg,#f3c969,#ff8b7a);}
+  .balance-legend{display:flex;flex-wrap:wrap;gap:5px 15px;margin-top:5px;font-size:10.5px;color:#a9c0ba;}
+  .balance-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .swatch{width:8px;height:8px;border-radius:2px;display:inline-block;}
+  .swatch.useful{background:#c9f36a;}
+  .swatch.loss{background:#ff8b7a;}
+  .result-side{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:130px;}
+  .final-score{display:flex;align-items:baseline;gap:2px;font-variant-numeric:tabular-nums;line-height:1;}
+  .final-score b{font-size:31px;letter-spacing:-.05em;color:#d9ff8a;}
+  .final-score span{font-size:11px;font-weight:700;color:#a9c0ba;}
+  .result-side .btn-primary{background:linear-gradient(135deg,#d9ff8a,#a7d94a);box-shadow:0 8px 18px rgba(201,243,106,.20);}
+  .result-side .btn-primary:hover{background:linear-gradient(135deg,#e4ff9b,#b9ec5a);}
+
+  /* ---------- Energiekette ---------- */
+  .energy-chain{
+    margin-top:13px;
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;
+    padding:9px 11px;
+    border:1px solid rgba(201,243,106,.20);
+    border-radius:14px;
+    background:linear-gradient(100deg,rgba(201,243,106,.10),rgba(10,36,41,.72) 55%,rgba(10,36,41,.45));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 26px rgba(0,0,0,.22);
+    width:fit-content;max-width:100%;
+  }
+  .chain-kicker{
+    font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    font-size:9.5px;color:#8fb39a;white-space:nowrap;
+  }
+  .chain-flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 3px;}
+  .chain-unit{display:inline-flex;align-items:center;gap:5px;}
+  .chain-step{
+    position:relative;display:inline-flex;align-items:center;gap:6px;
+    padding:4px 10px 4px 5px;border-radius:999px;
+    border:1px solid rgba(201,243,106,.16);background:#0c2d32;
+    color:#d7e8e2;font-size:12px;font-weight:700;white-space:nowrap;
+  }
+  .chain-step::after{
+    content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;
+    border:1px solid #c9f36a;background:rgba(201,243,106,.13);
+    box-shadow:0 0 0 1px rgba(201,243,106,.55),0 0 16px rgba(201,243,106,.30);
+    opacity:0;
+    animation:chainPulse 5.6s ease-in-out infinite;
+    animation-delay:calc(var(--i,0) * 1.4s);
+  }
+  .chain-num{
+    display:grid;place-items:center;width:16px;height:16px;border-radius:50%;
+    background:rgba(201,243,106,.14);color:#d9ff8a;font-size:9.5px;font-weight:800;
+  }
+  .chain-step.final{border-color:rgba(201,243,106,.40);color:#eaffbd;background:rgba(201,243,106,.10);}
+  .chain-step.final .chain-num{background:rgba(201,243,106,.24);}
+  .chain-arrow{width:28px;height:14px;flex:0 0 auto;overflow:visible;}
+  .chain-arrow .shaft{
+    fill:none;stroke:#c9f36a;stroke-width:2;stroke-linecap:round;stroke-dasharray:5 4;
+    animation:chainFlow .9s linear infinite;
+  }
+  .chain-arrow .head{
+    fill:none;stroke:#d9ff8a;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+    opacity:.6;
+    animation:chainTip 5.6s ease-in-out infinite;
+    animation-delay:calc(var(--i,0) * 1.4s + .7s);
+  }
+
+  /* ---------- Animationen ---------- */
+  @keyframes scoreBump{0%{transform:scale(1)}45%{transform:scale(1.13)}100%{transform:scale(1)}}
+  @keyframes nudge{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}18%{transform:translateX(-6px)}36%{transform:translateX(6px)}54%{transform:translateX(-4px)}72%{transform:translateX(4px)}}
+  @keyframes hintZone{0%,100%{box-shadow:0 4px 14px rgba(0,0,0,.22)}50%{box-shadow:0 0 0 7px rgba(201,243,106,.16),0 8px 22px rgba(0,0,0,.4);border-color:#c9f36a}}
+  @keyframes hintChip{0%,100%{box-shadow:0 3px 10px rgba(0,0,0,.25)}50%{box-shadow:0 0 0 5px rgba(201,243,106,.16),0 0 26px rgba(201,243,106,.16);border-color:#c9f36a}}
+  @keyframes placedIn{0%{opacity:0;transform:scale(.92)}100%{opacity:1;transform:scale(1)}}
+  @keyframes badgePop{0%{opacity:0;transform:scale(0) rotate(-25deg)}70%{opacity:1;transform:scale(1.14) rotate(4deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+  @keyframes successRing{0%{opacity:.75;transform:scale(.97)}100%{opacity:0;transform:scale(1.06)}}
+  @keyframes floatUp{0%{opacity:0;transform:translate(-50%,-30%) scale(.8)}25%{opacity:1;transform:translate(-50%,-55%) scale(1.05)}100%{opacity:0;transform:translate(-50%,-190%) scale(1)}}
+  @keyframes confettiFly{
+    0%{opacity:0;transform:translate(-50%,-50%) rotate(0) scale(.6)}
+    12%{opacity:1}
+    100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(var(--rot)) scale(1)}
+  }
+  @keyframes flowDash{to{stroke-dashoffset:-28;}}
+  @keyframes chainPulse{
+    0%,4%{opacity:0}
+    10%,20%{opacity:1}
+    30%,100%{opacity:0}
+  }
+  @keyframes chainFlow{from{stroke-dashoffset:0}to{stroke-dashoffset:-18;}}
+  @keyframes chainTip{
+    0%,100%{opacity:.55;transform:translateX(0)}
+    10%,20%{opacity:1;transform:translateX(1px)}
+    30%{opacity:.55;transform:translateX(0)}
+  }
+  @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+  /* ---------- SVG-Energiepfeile ---------- */
+  .flow .line{
+    fill:none;stroke:currentColor;stroke-width:4;
+    stroke-linecap:round;stroke-dasharray:2 11;
+    transition:stroke-width .3s,opacity .3s,filter .3s;
+    opacity:.8;
+  }
+  .flow--chem .line{stroke-width:5;}
+  .flow .head{fill:currentColor;opacity:.8;transition:opacity .3s,filter .3s;}
+  .flow.active .line{
+    opacity:1;stroke-dasharray:14 14;
+    animation:flowDash 1s linear infinite;
+    filter:drop-shadow(0 0 6px currentColor);
+  }
+  .flow.active .head{opacity:1;filter:drop-shadow(0 0 6px currentColor);}
+  .flow--chem.active .line{stroke-width:12;}
+  .flow--muscle.active .line{stroke-width:9;}
+  .flow--heat.active .line{stroke-width:8;}
+  .flow--kinetic.active .line{stroke-width:9;}
+  .flow--friction.active .line{stroke-width:7;}
+  .flow.active .head{opacity:1;}
+
+  /* ---------- Diagramm & Hochrechnung ---------- */
+  .sr-only{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+  }
+  .panel{
+    margin-top:18px;
+    padding:18px;
+    border:1px solid #1b444a;
+    border-radius:22px;
+    background:linear-gradient(180deg,rgba(12,45,50,.80),rgba(8,30,34,.62));
+    box-shadow:0 16px 40px rgba(0,0,0,.24),inset 0 1px 0 rgba(201,243,106,.07);
+  }
+  .panel-head{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    gap:18px;flex-wrap:wrap;margin-bottom:14px;
+  }
+  .panel-kicker{
+    display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.15em;
+    text-transform:uppercase;color:#d9ff8a;
+  }
+  .panel h2{margin:3px 0 5px;font-size:19px;letter-spacing:-.02em;color:#eef7f2;}
+  .panel-head p{margin:0;max-width:72ch;font-size:12.5px;line-height:1.5;color:#a9c0ba;}
+  .panel-head p b{color:#d9ff8a;font-weight:700;}
+
+  .power-readout{
+    flex:0 0 auto;min-width:152px;text-align:right;
+    padding:8px 14px;border-radius:14px;
+    background:rgba(201,243,106,.08);border:1px solid rgba(201,243,106,.24);
+    box-shadow:inset 0 1px 0 rgba(201,243,106,.10);
+  }
+  .power-readout .readout-main{
+    display:flex;align-items:baseline;justify-content:flex-end;gap:3px;
+    font-variant-numeric:tabular-nums;line-height:1;color:#d9ff8a;
+  }
+  .power-readout .readout-main b{font-size:32px;font-weight:800;letter-spacing:-.05em;}
+  .power-readout .readout-main span{font-size:13px;font-weight:700;}
+  .power-readout .readout-sub{font-size:10.5px;color:#9fb8b2;margin-top:3px;}
+
+  .power-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end;}
+  .slider-wrap{display:block;min-width:0;}
+  .slider-label{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:10.5px;font-weight:700;color:#8fa9a4;}
+  .slider-label span:nth-child(2){color:#c3d8d2;letter-spacing:.10em;text-transform:uppercase;font-weight:800;}
+  .power-range{
+    -webkit-appearance:none;appearance:none;
+    width:100%;height:12px;border-radius:999px;outline:none;cursor:pointer;
+    background:linear-gradient(90deg,#a7d94a 0%,#d9ff8a var(--fill,31%),#06191d var(--fill,31%),#06191d 100%);
+    border:1px solid #245158;
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.5);
+  }
+  .power-range::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:24px;height:24px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#f0ffc0,#c9f36a 58%,#8fbf34);
+    border:2px solid #08210f;cursor:grab;
+    box-shadow:0 0 0 4px rgba(201,243,106,.16),0 0 18px rgba(201,243,106,.55);
+  }
+  .power-range::-moz-range-thumb{
+    width:22px;height:22px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#f0ffc0,#c9f36a 58%,#8fbf34);
+    border:2px solid #08210f;cursor:grab;
+    box-shadow:0 0 0 4px rgba(201,243,106,.16),0 0 18px rgba(201,243,106,.55);
+  }
+  .power-range:focus-visible{outline:3px solid #e4ff9b;outline-offset:4px;}
+
+  .power-buttons{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .speed-toggle{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:11.5px;color:#a9c0ba;cursor:pointer;user-select:none;
+    padding:6px 9px;border-radius:9px;border:1px solid #245158;background:#0c2d32;
+  }
+  .speed-toggle:hover{border-color:#3d7a72;color:#eef7f2;}
+  .speed-toggle input{accent-color:#c9f36a;width:15px;height:15px;margin:0;cursor:pointer;}
+
+  .chart-wrap{
+    position:relative;margin-top:14px;
+    border:1px solid #1b444a;border-radius:16px;
+    background:
+      radial-gradient(620px 240px at 18% 0%,rgba(201,243,106,.06),transparent 72%),
+      #06191d;
+    padding:10px 10px 6px;
+    overflow:hidden;
+  }
+  #powerChart{display:block;width:100%;height:240px;touch-action:pan-y;}
+  .chart-empty{
+    position:absolute;inset:0;display:grid;place-items:center;
+    font-size:12.5px;color:#7f9a95;pointer-events:none;text-align:center;padding:20px;
+    transition:opacity .2s;
+  }
+  .chart-empty.hidden{opacity:0;}
+
+  .run-bar{display:flex;align-items:center;gap:12px;margin-top:11px;flex-wrap:wrap;}
+  .run-time{font-size:11.5px;font-weight:700;color:#c3d8d2;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .run-progress{
+    flex:1 1 180px;height:8px;border-radius:999px;background:#06191d;overflow:hidden;
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.55);border:1px solid #17393f;
+  }
+  .run-progress span{
+    display:block;height:100%;width:0;border-radius:inherit;
+    background:linear-gradient(90deg,#a7d94a,#d9ff8a);
+    box-shadow:0 0 12px rgba(201,243,106,.5);
+    transition:width .12s linear;
+  }
+  .run-stats{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:11px;}
+  .run-stat{display:flex;flex-direction:column;gap:2px;min-width:96px;}
+  .run-stat span{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7f9a95;}
+  .run-stat b{font-size:14px;color:#eef7f2;font-variant-numeric:tabular-nums;}
+  .run-stat b em{font-style:normal;font-size:11px;color:#9fb8b2;font-weight:600;}
+  .chart-note{margin:10px 0 0;font-size:11px;color:#7f9a95;line-height:1.55;}
+  .chart-note b{color:#d9ff8a;}
+
+  .price-field{
+    display:flex;align-items:center;gap:9px;flex:0 0 auto;
+    padding:8px 12px;border-radius:12px;
+    background:#0c2d32;border:1px solid #245158;
+  }
+  .price-field label{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8fa9a4;}
+  .price-input{width:82px;}
+  .price-unit{font-size:12px;font-weight:700;color:#c3d8d2;white-space:nowrap;}
+
+  .field{
+    width:100%;min-width:0;
+    background:#06191d;border:1px solid #245158;color:#eef7f2;
+    border-radius:9px;padding:7px 9px;font-size:12.5px;
+    font-variant-numeric:tabular-nums;
+    transition:border-color .18s,box-shadow .18s,background .18s;
+  }
+  .field:hover{border-color:#3d7a72;}
+  .field:focus{outline:none;border-color:#c9f36a;box-shadow:0 0 0 3px rgba(201,243,106,.18);background:#082026;}
+  .field::placeholder{color:#6f8e88;}
+  .field[type=number]{appearance:textfield;-moz-appearance:textfield;}
+  .field[type=number]::-webkit-outer-spin-button,
+  .field[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  select.field{
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238fa9a4' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 8px center;background-size:14px 14px;
+    padding-right:28px;
+  }
+
+  .table-scroll{position:relative;overflow-x:auto;border-radius:14px;border:1px solid #1b444a;scrollbar-width:thin;scrollbar-color:#2a5a60 transparent;}
+  .calc-table{width:100%;border-collapse:collapse;min-width:880px;font-size:12.5px;}
+  .calc-table th,.calc-table td{padding:9px 10px;text-align:right;white-space:nowrap;}
+  .calc-table thead th{
+    background:#0a2429;font-size:9.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;
+    color:#8fa9a4;border-bottom:1px solid #245158;
+  }
+  .calc-table thead th:first-child{text-align:left;}
+  .calc-table tbody tr{border-bottom:1px solid rgba(27,68,74,.7);}
+  .calc-table tbody tr:last-child{border-bottom:0;}
+  .calc-table tbody tr:hover{background:rgba(201,243,106,.04);}
+  .calc-table td:first-child{text-align:left;}
+  .calc-table td.num{font-variant-numeric:tabular-nums;color:#dff0e9;}
+  .calc-table td.hours{color:#b8cec8;}
+  .calc-table td.kwh{color:#d9ff8a;font-weight:700;}
+  .calc-table td.cost{color:#f3c969;font-weight:700;}
+  .calc-table tbody input[type=text]{min-width:158px;text-align:left;}
+  .calc-table tbody input[type=number]{width:84px;text-align:right;}
+  .calc-table tbody select{min-width:168px;}
+  .row-del{
+    width:26px;height:26px;border-radius:8px;border:1px solid #245158;background:#0c2d32;
+    color:#9fb8b2;display:grid;place-items:center;cursor:pointer;font-size:15px;line-height:1;
+    transition:border-color .18s,color .18s,background .18s;
+  }
+  .row-del:hover{border-color:#ff7b6b;color:#ffb3a9;background:rgba(255,123,107,.12);}
+  .row-del:disabled{opacity:.35;cursor:not-allowed;border-color:#1b444a;color:#6f8e88;background:#0a2429;}
+  .row-del:focus-visible{outline:3px solid #e4ff9b;outline-offset:2px;}
+  .calc-table tfoot th,.calc-table tfoot td{
+    background:rgba(201,243,106,.07);border-top:1px solid rgba(201,243,106,.30);
+    padding:11px 10px;text-align:right;font-variant-numeric:tabular-nums;
+  }
+  .calc-table tfoot th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#c3d8d2;}
+  .calc-table tfoot td.kwh{color:#d9ff8a;font-weight:800;}
+  .calc-table tfoot td.cost{color:#f3c969;font-weight:800;}
+
+  .table-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;}
+  .hint-inline{font-size:11px;color:#7f9a95;line-height:1.5;}
+
+  .summary-strip{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+  .summary-stat{
+    flex:1 1 170px;padding:10px 13px;border-radius:12px;
+    background:#0a2429;border:1px solid #1b444a;
+  }
+  .summary-stat span{display:block;font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7f9a95;}
+  .summary-stat b{display:block;margin-top:3px;font-size:16px;color:#d9ff8a;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+
+  .pool-table{width:100%;border-collapse:collapse;min-width:560px;font-size:13px;}
+  .pool-table th,.pool-table td{padding:10px 12px;text-align:right;white-space:nowrap;}
+  .pool-table thead th{
+    background:#0a2429;font-size:9.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;
+    color:#8fa9a4;border-bottom:1px solid #245158;
+  }
+  .pool-table thead th:first-child{text-align:left;}
+  .pool-table tbody tr{border-bottom:1px solid rgba(27,68,74,.7);}
+  .pool-table tbody tr:last-child{border-bottom:0;}
+  .pool-table tbody tr:hover{background:rgba(201,243,106,.055);}
+  .pool-table td:first-child{text-align:left;font-weight:800;color:#eef7f2;font-variant-numeric:tabular-nums;}
+  .pool-table td.kwh{color:#d9ff8a;font-weight:700;font-variant-numeric:tabular-nums;}
+  .pool-table td.cost{color:#f3c969;font-weight:700;font-variant-numeric:tabular-nums;}
+  .pool-table td.day{color:#b8cec8;font-variant-numeric:tabular-nums;}
+
+  @media (max-width:900px){
+    .panel{padding:14px;border-radius:18px;}
+    .power-controls{grid-template-columns:1fr;}
+    .power-readout{text-align:left;}
+    .power-readout .readout-main{justify-content:flex-start;}
+    .power-buttons{justify-content:flex-start;}
+  }
+  @media (max-width:640px){
+    .panel{padding:12px;border-radius:16px;}
+    .panel h2{font-size:17px;}
+    #powerChart{height:200px;}
+    .power-buttons{width:100%;}
+    .power-buttons .btn{flex:1 1 auto;}
+    .speed-toggle{flex:1 1 100%;justify-content:center;}
+    .run-stats{gap:8px 16px;}
+    .run-stat{min-width:86px;}
+    .price-field{width:100%;justify-content:space-between;}
+    .table-tools{align-items:flex-start;}
+  }
+
+  /* ---------- Responsiv ---------- */
+  @media (max-width:980px){
+    .topbar{grid-template-columns:1fr;gap:14px;align-items:start;}
+    .hud{max-width:420px;width:100%;}
+    .intro p{max-width:75ch;}
+    .play-layout{grid-template-columns:1fr;}
+    .tray-head{flex-direction:row;align-items:center;justify-content:space-between;}
+    .tray-sub{display:block;margin-top:3px;}
+    .tray-actions{flex:0 0 auto;}
+    .tray-actions .btn{flex:0 0 auto;}
+    .chips{grid-template-columns:repeat(auto-fit,minmax(186px,1fr));flex:0 0 auto;}
+  }
+  @media (max-width:900px){
+    body{padding:18px 12px 28px;}
+    .board{padding:11px;border-radius:22px;}
+    .stage{min-width:860px;}
+    .stage-scroll{overflow-x:auto;}
+    .result{flex-wrap:wrap;}
+    .result-side{flex-direction:row;width:100%;justify-content:space-between;min-width:0;}
+  }
+  @media (max-width:640px){
+    body{padding:14px 9px 24px;}
+    .board{padding:8px;border-radius:18px;}
+    .stage{min-width:820px;}
+    .intro h1{font-size:25px;}
+    .tray-head{align-items:flex-start;}
+    .tray-sub{display:none;}
+    .tray-actions{margin-left:auto;}
+    .btn{padding:7px 9px;}
+    .chips{grid-template-columns:1fr;}
+    .result{padding:13px;}
+    .result-icon{width:44px;height:44px;border-radius:13px;}
+    .result h2{font-size:17px;}
+    .feedback{font-size:12px;}
+    .tray-title{font-size:10px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+      animation-duration:.01ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.01ms !important;
+      scroll-behavior:auto !important;
+    }
+    .flow.active .line{animation:none;stroke-dasharray:none;}
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="topbar">
+    <div class="intro">
+      <span class="eyebrow"><span class="dot"></span> Physik · Energieumwandlung</span>
+      <h1>Energiefluss beim Fahrradfahren</h1>
+      <p>Ziehe die fünf Begriffe an die richtige Stelle im Bild – oder tippe erst einen Begriff und dann das passende Feld an. <b>Die Pfeile zeigen, wohin die Energie fließt.</b></p>
+      <div class="energy-chain" role="img" aria-label="Energiekette: Nahrung, chemische Energie, Muskelarbeit, Bewegung und Wärme">
+        <span class="chain-kicker" aria-hidden="true">Energiekette</span>
+        <div class="chain-flow" aria-hidden="true">
+          <span class="chain-unit" style="--i:0">
+            <span class="chain-step" style="--i:0"><span class="chain-num">1</span>Nahrung</span>
+            <svg class="chain-arrow" viewBox="0 0 28 14" focusable="false">
+              <path class="shaft" d="M1 7h19"/>
+              <path class="head" d="M16 2.5 21.5 7 16 11.5"/>
+            </svg>
+          </span>
+          <span class="chain-unit" style="--i:1">
+            <span class="chain-step" style="--i:1"><span class="chain-num">2</span>chemische Energie</span>
+            <svg class="chain-arrow" viewBox="0 0 28 14" focusable="false">
+              <path class="shaft" d="M1 7h19"/>
+              <path class="head" d="M16 2.5 21.5 7 16 11.5"/>
+            </svg>
+          </span>
+          <span class="chain-unit" style="--i:2">
+            <span class="chain-step" style="--i:2"><span class="chain-num">3</span>Muskelarbeit</span>
+            <svg class="chain-arrow" viewBox="0 0 28 14" focusable="false">
+              <path class="shaft" d="M1 7h19"/>
+              <path class="head" d="M16 2.5 21.5 7 16 11.5"/>
+            </svg>
+          </span>
+          <span class="chain-unit" style="--i:3">
+            <span class="chain-step final" style="--i:3"><span class="chain-num">4</span>Bewegung + Wärme</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud" aria-label="Spielstand">
+      <div class="hud-score">
+        <div class="score-value" id="scoreValue"><span id="score">0</span><small>/100</small></div>
+        <div class="score-meta">
+          <span>Punkte</span>
+          <b id="foundLabel">0 von 5 Zuordnungen</b>
+        </div>
+      </div>
+      <div class="progress" id="progress" role="progressbar" aria-label="Gefundene Zuordnungen" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0">
+        <span id="progressBar"></span>
+      </div>
+      <div class="hud-stats">
+        <span>
+          <svg class="mini-ico ok" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <b id="foundCount">0</b>/5 gefunden
+        </span>
+        <span>
+          <svg class="mini-ico warn" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5m0 3.2v.1M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.8L13.7 3.9a2 2 0 0 0-3.4 0Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <b id="errorCount">0</b> Fehlversuche
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <section class="board" aria-label="Zuordnungsspiel Energiefluss Fahrrad">
+    <div class="play-layout" id="playLayout">
+      <div class="play-main">
+        <div class="stage-scroll">
+      <div class="stage" id="stage">
+        <svg class="scene" viewBox="0 0 1100 660" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="sceneTitle sceneDesc">
+          <title id="sceneTitle">Mensch auf einem Fahrrad mit Energieflüssen</title>
+          <desc id="sceneDesc">Seitenansicht einer Radfahrerin. Gestrichelte Pfeile verbinden die fünf markierten Felder mit Nahrung, Muskeln, Rad, Körperwärme und Kette.</desc>
+          <defs>
+            <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#0c2d32"/>
+              <stop offset=".58" stop-color="#081e22"/>
+              <stop offset="1" stop-color="#05191d"/>
+            </linearGradient>
+            <radialGradient id="sunGrad">
+              <stop offset="0" stop-color="#c9f36a" stop-opacity=".55"/>
+              <stop offset=".45" stop-color="#c9f36a" stop-opacity=".14"/>
+              <stop offset="1" stop-color="#c9f36a" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="jerseyGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#17535a"/>
+              <stop offset="1" stop-color="#0d3238"/>
+            </linearGradient>
+            <linearGradient id="roadGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#0b282d"/>
+              <stop offset="1" stop-color="#071a1e"/>
+            </linearGradient>
+          </defs>
+
+          <rect width="1100" height="660" fill="url(#skyGrad)"/>
+          <circle cx="145" cy="118" r="112" fill="url(#sunGrad)"/>
+          <circle cx="145" cy="118" r="39" fill="#c9f36a" opacity=".88"/>
+          <circle cx="145" cy="118" r="52" fill="none" stroke="#c9f36a" stroke-width="1.5" opacity=".22"/>
+          <g fill="#8fbdb4" opacity=".10">
+            <ellipse cx="335" cy="118" rx="56" ry="18"/>
+            <ellipse cx="378" cy="109" rx="37" ry="14"/>
+            <ellipse cx="760" cy="72" rx="48" ry="14"/>
+          </g>
+          <path d="M0 520 C150 430 260 455 380 500 C520 552 620 470 760 485 C900 500 1000 455 1100 490 L1100 570 L0 570Z" fill="#0e3238"/>
+          <path d="M0 535 C170 470 300 505 430 532 C600 568 720 505 850 512 C960 518 1030 500 1100 512 L1100 575 L0 575Z" fill="#123a40"/>
+          <path d="M0 548 H1100 V660 H0Z" fill="url(#roadGrad)"/>
+          <path d="M0 548 H1100" stroke="#1b454b" stroke-width="3"/>
+          <path d="M0 628 H1100" stroke="#245158" stroke-width="4" stroke-dasharray="28 24" opacity=".85"/>
+
+          <ellipse cx="590" cy="552" rx="285" ry="15" fill="#000000" opacity=".30"/>
+
+          <g stroke="#5d9a91" stroke-width="7" stroke-linecap="round" opacity=".38">
+            <path d="M218 342 H284"/>
+            <path d="M182 402 H242"/>
+            <path d="M246 457 H298"/>
+          </g>
+
+          <!-- hinteres Bein und Arm -->
+          <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M515 315 L592 372 L557 428" stroke="#123a40" stroke-width="22"/>
+            <path d="M592 372 L557 428" stroke="#e8b98e" stroke-width="13"/>
+            <path d="M557 428 L571 432" stroke="#123a40" stroke-width="15"/>
+            <path d="M628 240 L678 294 L722 321" stroke="#17535a" stroke-width="15"/>
+          </g>
+          <circle cx="722" cy="321" r="8" fill="#e8b98e"/>
+
+          <!-- Fahrrad -->
+          <g id="bike">
+            <g class="wheel">
+              <circle cx="430" cy="475" r="76" fill="none" stroke="#a9c9c4" stroke-width="13"/>
+              <circle cx="430" cy="475" r="63" fill="none" stroke="#4e7774" stroke-width="2.5"/>
+              <g stroke="#6e9690" stroke-width="2" opacity=".9">
+                <path d="M430 414 V536"/>
+                <path d="M369 475 H491"/>
+                <path d="M387 432 L473 518"/>
+                <path d="M473 432 L387 518"/>
+              </g>
+              <circle cx="430" cy="475" r="8" fill="#a9c9c4"/>
+            </g>
+            <g class="wheel">
+              <circle cx="755" cy="475" r="76" fill="none" stroke="#a9c9c4" stroke-width="13"/>
+              <circle cx="755" cy="475" r="63" fill="none" stroke="#4e7774" stroke-width="2.5"/>
+              <g stroke="#6e9690" stroke-width="2" opacity=".9">
+                <path d="M755 414 V536"/>
+                <path d="M694 475 H816"/>
+                <path d="M712 432 L798 518"/>
+                <path d="M798 432 L712 518"/>
+              </g>
+              <circle cx="755" cy="475" r="8" fill="#a9c9c4"/>
+            </g>
+
+            <g fill="none" stroke="#c9f36a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M430 475 L505 330 L705 345 L545 480"/>
+              <path d="M505 330 L545 480"/>
+              <path d="M545 480 L430 475"/>
+              <path d="M705 345 L755 475" stroke-width="10"/>
+              <path d="M705 345 L728 318" stroke-width="10"/>
+            </g>
+            <path d="M505 330 L705 345" fill="none" stroke="#c9f36a" stroke-width="3" opacity=".55"/>
+            <path d="M480 322 Q505 311 529 325 Q520 334 502 335 Q488 334 480 322Z" fill="#123a40"/>
+            <path d="M505 330 V342" stroke="#123a40" stroke-width="7"/>
+            <path d="M728 318 Q748 300 754 322 Q756 334 738 334" fill="none" stroke="#123a40" stroke-width="10" stroke-linecap="round"/>
+
+            <g fill="none">
+              <path d="M545 454 L430 466" stroke="#4e7774" stroke-width="4"/>
+              <path d="M545 506 L430 484" stroke="#4e7774" stroke-width="4"/>
+            </g>
+            <circle cx="545" cy="480" r="26" fill="none" stroke="#7fa8a2" stroke-width="6"/>
+            <circle cx="545" cy="480" r="15" fill="#2f5a5a" stroke="#7fa8a2" stroke-width="3"/>
+            <circle cx="430" cy="475" r="11" fill="#7fa8a2" stroke="#7fa8a2" stroke-width="3"/>
+            <path d="M545 480 L533 532" stroke="#4e7774" stroke-width="7" stroke-linecap="round"/>
+            <path d="M545 480 L557 428" stroke="#4e7774" stroke-width="7" stroke-linecap="round"/>
+            <rect x="523" y="527" width="24" height="9" rx="4.5" fill="#123a40" transform="rotate(-4 535 531)"/>
+            <rect x="546" y="421" width="24" height="9" rx="4.5" fill="#123a40"/>
+          </g>
+          <!-- Fahrerin -->
+          <g id="rider">
+            <path d="M509 325 L636 238" stroke="url(#jerseyGrad)" stroke-width="44" stroke-linecap="round"/>
+            <path d="M524 313 L621 246" stroke="#c9f36a" stroke-width="8" stroke-linecap="round" opacity=".26"/>
+            <circle cx="512" cy="320" r="21" fill="#123a40"/>
+            <path d="M634 242 L688 292 L735 321" fill="none" stroke="url(#jerseyGrad)" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="738" cy="324" r="9" fill="#e8b98e"/>
+            <path d="M641 239 L660 214" stroke="#e8b98e" stroke-width="14" stroke-linecap="round"/>
+            <circle cx="679" cy="196" r="21" fill="#e8b98e"/>
+            <path d="M697 193 Q704 196 702 202 Q701 206 696 205" fill="#e8b98e"/>
+            <circle cx="669" cy="201" r="4.5" fill="#d9a276"/>
+            <path d="M687 192 Q694 189 700 193" fill="none" stroke="#123a40" stroke-width="4" stroke-linecap="round"/>
+            <path d="M655 191 Q657 166 681 164 Q703 163 709 188 Q700 178 690 181 Q676 173 664 182 Q658 184 655 191Z" fill="#f0a35e"/>
+            <path d="M659 186 Q682 175 705 186" fill="none" stroke="#e4ff9b" stroke-width="3" opacity=".75"/>
+            <path d="M704 184 L721 188" stroke="#f0a35e" stroke-width="5" stroke-linecap="round"/>
+
+            <path d="M515 315 L583 394" fill="none" stroke="#123a40" stroke-width="24" stroke-linecap="round"/>
+            <path d="M583 394 L535 527" fill="none" stroke="#e8b98e" stroke-width="14" stroke-linecap="round"/>
+            <path d="M535 527 L548 532" fill="none" stroke="#123a40" stroke-width="16" stroke-linecap="round"/>
+          </g>
+
+          <!-- Gestrichelte Energieflüsse (werden beim Lösen farbig) -->
+          <g class="flows" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <g class="flow flow--chem" data-flow="chem" style="color:#3e676b">
+              <path class="line" d="M248 274 C320 272 420 295 498 305"/>
+              <path class="head" d="M498 305 L484 297 L484 313 Z" stroke="none"/>
+            </g>
+            <g class="flow flow--muscle" data-flow="muscle" style="color:#3e676b">
+              <path class="line" d="M248 465 C350 463 470 430 568 398"/>
+              <path class="head" d="M568 398 L554 393 L555 405 Z" stroke="none"/>
+            </g>
+            <g class="flow flow--heat" data-flow="heat" style="color:#3e676b">
+              <path class="line" d="M665 200 C710 160 780 112 844 96"/>
+              <path class="head" d="M844 96 L827 99 L834 112 Z" stroke="none"/>
+            </g>
+            <g class="flow flow--kinetic" data-flow="kinetic" style="color:#3e676b">
+              <path class="line" d="M755 475 C790 448 810 405 844 373"/>
+              <path class="head" d="M844 373 L827 376 L834 389 Z" stroke="none"/>
+            </g>
+            <g class="flow flow--friction" data-flow="friction" style="color:#3e676b">
+              <path class="line" d="M545 505 C545 525 548 540 550 561"/>
+              <path class="head" d="M550 561 L543 548 L557 548 Z" stroke="none"/>
+            </g>
+          </g>
+        </svg>
+        <div class="zones" id="zones"></div>
+        <div class="fx" id="fx" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div class="feedback" id="status" role="status" aria-live="polite" data-tone="info">
+      <span class="status-icon" id="statusGlyph" aria-hidden="true">i</span>
+      <p id="statusText">Ordne die fünf Begriffe den passenden Stellen im Bild zu.</p>
+    </div>
+      </div>
+
+      <aside class="tray" id="tray" aria-label="Begriffe zum Zuordnen">
+        <div class="tray-head">
+          <div>
+            <span class="tray-title">Begriffe</span><span class="tray-sub">Ziehen &amp; ablegen · oder antippen</span>
+          </div>
+          <div class="tray-actions">
+            <button class="btn btn-ghost" id="hintBtn" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Tipp
+            </button>
+            <button class="btn btn-ghost" id="resetBtn" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Neu starten
+            </button>
+          </div>
+        </div>
+        <div class="chips" id="chips"></div>
+      </aside>
+    </div>
+
+    <div class="result hidden" id="result">
+      <div class="result-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <div class="result-main">
+        <span class="result-kicker">Auswertung</span>
+        <h2 id="resultTitle">Alle Energieflüsse zugeordnet!</h2>
+        <p id="resultText">Nahrung liefert chemische Energie. In den Muskeln wird sie in Bewegung umgewandelt. Der größte Teil verlässt den Körper als Wärme.</p>
+        <div class="balance" aria-label="Ungefähre Energiebilanz">
+          <div class="balance-bar">
+            <span class="useful"></span><span class="loss"></span>
+          </div>
+          <div class="balance-legend">
+            <span><i class="swatch useful"></i>ca. 20–25 % Bewegung</span>
+            <span><i class="swatch loss"></i>ca. 75–80 % Wärme</span>
+          </div>
+        </div>
+      </div>
+      <div class="result-side">
+        <div class="final-score"><b id="finalScore">100</b><span>/100 Punkte</span></div>
+        <button class="btn btn-primary" id="againBtn" type="button">Noch einmal spielen</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel power-panel" aria-labelledby="powerTitle">
+    <div class="panel-head">
+      <div>
+        <span class="panel-kicker">Messung · 60 Sekunden</span>
+        <h2 id="powerTitle">Leistungskurve und Energie</h2>
+        <p>Stelle mit dem Regler eine Leistung zwischen <b>25 W und 500 W</b> ein und starte die Messung. Die Kurve zeichnet den Verlauf über 60 Sekunden, darunter siehst du Mittelwert und umgesetzte Energie.</p>
+      </div>
+      <div class="power-readout">
+        <div class="readout-main"><b id="powerValue">150</b><span>W</span></div>
+        <div class="readout-sub" id="powerCaption">eingestellte Leistung</div>
+      </div>
+    </div>
+
+    <div class="power-controls">
+      <div class="slider-wrap">
+        <label class="slider-label" for="powerRange">
+          <span>25 W</span><span>Leistung</span><span>500 W</span>
+        </label>
+        <input class="power-range" id="powerRange" type="range" min="25" max="500" step="5" value="150" aria-describedby="powerCaption">
+      </div>
+      <div class="power-buttons">
+        <button class="btn btn-primary" id="runBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+          <span id="runBtnLabel">60 s starten</span>
+        </button>
+        <button class="btn btn-ghost" id="chartResetBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Zurücksetzen
+        </button>
+        <label class="speed-toggle" for="speedToggle">
+          <input id="speedToggle" type="checkbox">
+          ×10 Zeitraffer
+        </label>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <canvas id="powerChart" role="img" aria-label="Leistungskurve über 60 Sekunden"></canvas>
+      <div class="chart-empty" id="chartEmpty">Noch keine Messung – „60 s starten“ drücken.</div>
+    </div>
+
+    <div class="run-bar">
+      <span class="run-time" id="runTime">00:00 / 01:00</span>
+      <div class="run-progress" id="runProgress" role="progressbar" aria-label="Messdauer in Sekunden" aria-valuemin="0" aria-valuemax="60" aria-valuenow="0">
+        <span id="runProgressBar"></span>
+      </div>
+    </div>
+
+    <div class="run-stats">
+      <div class="run-stat"><span>Momentan</span><b id="statNow">150 <em>W</em></b></div>
+      <div class="run-stat"><span>Mittelwert</span><b id="statAvg">– <em>W</em></b></div>
+      <div class="run-stat"><span>Energie in 60 s</span><b id="statEnergy">– <em>kJ</em></b></div>
+      <div class="run-stat"><span>entspricht</span><b id="statWh">– <em>Wh</em></b></div>
+    </div>
+
+    <p class="sr-only" id="runAnnounce" role="status" aria-live="polite"></p>
+
+    <p class="chart-note">Energie = Leistung × Zeit. Bei 150 W und 60 Sekunden sind das 9 000 J = 9 kJ = 2,5 Wh. Der Zeitraffer verkürzt nur die Anzeige – gemessen werden weiterhin 60 Sekunden.</p>
+  </section>
+
+  <section class="panel calc-panel" aria-labelledby="calcTitle">
+    <div class="panel-head">
+      <div>
+        <span class="panel-kicker">Hochrechnung · Jahr</span>
+        <h2 id="calcTitle">Verbrauch und Kosten pro Jahr</h2>
+        <p>Jede Zeile beschreibt eine Nutzung: Leistung, Dauer und Zeitraum. Daraus werden Stunden pro Jahr, Kilowattstunden und Kosten berechnet.</p>
+      </div>
+      <div class="price-field">
+        <label for="priceInput">Strompreis</label>
+        <input class="field price-input" id="priceInput" type="number" min="0" max="200" step="0.1" value="40" inputmode="decimal">
+        <span class="price-unit">ct/kWh</span>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="calc-table">
+        <thead>
+          <tr>
+            <th scope="col">Gerät / Aktivität</th>
+            <th scope="col">Leistung (W)</th>
+            <th scope="col">Dauer</th>
+            <th scope="col">Zeitraum</th>
+            <th scope="col">Stunden / Jahr</th>
+            <th scope="col">kWh / Jahr</th>
+            <th scope="col">Kosten / Jahr</th>
+            <th scope="col"><span class="sr-only">Zeile entfernen</span></th>
+          </tr>
+        </thead>
+        <tbody id="calcRows"></tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" colspan="4">Summe pro Schüler:in</th>
+            <td class="num hours" id="sumHours">–</td>
+            <td class="num kwh" id="sumKwh">–</td>
+            <td class="num cost" id="sumCost">–</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="table-tools">
+      <button class="btn btn-ghost" id="addRowBtn" type="button">+ Zeile hinzufügen</button>
+      <span class="hint-inline">Umrechnung: Minuten/Tag ÷ 60 × 365 · Stunden/Tag × 365 · Tage/Monat × 24 × 12 · Monate/Jahr × 730 · Jahre × 8 760.</span>
+    </div>
+  </section>
+
+  <section class="panel pool-panel" aria-labelledby="poolTitle">
+    <div class="panel-head">
+      <div>
+        <span class="panel-kicker">Klassen &amp; Schule</span>
+        <h2 id="poolTitle">Hochrechnung für mehrere Schüler:innen</h2>
+        <p>Der Jahresverbrauch aus der Tabelle wird mit der Anzahl der Schüler:innen multipliziert – gleiches Nutzungsverhalten für alle angenommen.</p>
+      </div>
+    </div>
+
+    <div class="summary-strip">
+      <div class="summary-stat"><span>Verbrauch pro Schüler:in</span><b id="perStudentKwh">– kWh</b></div>
+      <div class="summary-stat"><span>Kosten pro Schüler:in</span><b id="perStudentCost">– €</b></div>
+      <div class="summary-stat"><span>Strompreis</span><b id="priceEcho">40 ct/kWh</b></div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="pool-table">
+        <thead>
+          <tr>
+            <th scope="col">Schüler:innen</th>
+            <th scope="col">Verbrauch / Jahr</th>
+            <th scope="col">Kosten / Jahr</th>
+            <th scope="col">Verbrauch / Tag</th>
+          </tr>
+        </thead>
+        <tbody id="poolRows"></tbody>
+      </table>
+    </div>
+    <p class="chart-note">Berechnung: Jahresverbrauch × Anzahl · Kosten = kWh × Strompreis in ct/kWh ÷ 100.</p>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+
+  /* =========================================================
+     INHALT & POSITIONEN
+     Die Felder lassen sich hier anpassen. left/top/width/height
+     beziehen sich auf die 1100 × 660 große Zeichenfläche.
+     ========================================================= */
+  const TASKS = [
+    {
+      key: "chem", num: 1,
+      title: "Chemische Energie", sub: "in der Nahrung",
+      zoneHint: "Aufnahme",
+      color: "#f3c969", soft: "rgba(243,201,105,.16)", icon: "apple",
+      feedback: "Richtig! In der Nahrung steckt chemische Energie – der Treibstoff für die Muskeln.",
+      hint: "Die Energie kommt mit der Nahrung in den Körper. Welches Feld beschreibt die Aufnahme?"
+    },
+    {
+      key: "muscle", num: 2,
+      title: "Muskelarbeit", sub: "Umwandlung im Körper",
+      zoneHint: "Umwandlung",
+      color: "#5eead4", soft: "rgba(94,234,212,.15)", icon: "bolt",
+      feedback: "Richtig! In den Muskeln wird chemische Energie in Bewegung umgewandelt.",
+      hint: "Im Körper wird Energie umgewandelt, damit sich die Beine bewegen."
+    },
+    {
+      key: "kinetic", num: 3,
+      title: "Kinetische Energie", sub: "Bewegung von Fahrer & Rad",
+      zoneHint: "Bewegung",
+      color: "#7dd3fc", soft: "rgba(125,211,252,.15)", icon: "wheel",
+      feedback: "Richtig! Fahrerin und Fahrrad bewegen sich – das ist kinetische Energie.",
+      hint: "Fahrerin und Fahrrad sind in Bewegung. Wo steckt diese Energie?"
+    },
+    {
+      key: "heat", num: 4,
+      title: "Wärmeenergie", sub: "Abgabe an die Umgebung",
+      zoneHint: "Abgabe",
+      color: "#ff9b8a", soft: "rgba(255,155,138,.15)", icon: "flame",
+      feedback: "Richtig! Ein großer Teil der Energie wird als Wärme an die Umgebung abgegeben.",
+      hint: "Achte auf die wellige Linie am Rücken: Ein Teil der Energie verlässt den Körper."
+    },
+    {
+      key: "friction", num: 5,
+      title: "Reibung", sub: "Verlust in Kette & Lagern",
+      zoneHint: "Verlust",
+      color: "#c9b6ff", soft: "rgba(201,182,255,.15)", icon: "link",
+      feedback: "Richtig! Reibung in Kette und Lagern geht als Wärme verloren.",
+      hint: "Kette und Lager reiben. Dort geht ein kleiner Teil der Energie verloren."
+    }
+  ];
+
+  const ZONE_POS = {
+    chem:     { left: "1.5%",  top: "34%", width: "21%",   height: "15%" },
+    muscle:   { left: "1.5%",  top: "63%", width: "21%",   height: "15%" },
+    heat:     { left: "76.8%", top: "7%",  width: "20.5%", height: "15%" },
+    kinetic:  { left: "76.8%", top: "49%", width: "20.5%", height: "15%" },
+    friction: { left: "37.5%", top: "85%", width: "25%",   height: "14%" }
+  };
+
+  const ICONS = {
+    apple: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.1c-1.2-2-3.4-2.7-5-1.3-1.8 1.5-1.9 4.3-.6 6.8 1.2 2.3 2.8 4.6 4 4.6.7 0 1-.4 1.6-.4s.9.4 1.6.4c1.2 0 2.8-2.3 4-4.6 1.3-2.5 1.2-5.3-.6-6.8-1.6-1.4-3.8-.7-5 1.3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 8.1c0-2 .9-3.4 2.6-4.3M12 8.1c-.3-1.6-1.3-2.7-2.9-3.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+    bolt: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2 4.4 13.6h5.4L8.8 22l8.8-11.6h-5.4L13.2 2Z" fill="currentColor"/></svg>`,
+    wheel: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.6v17M3.6 12h16.8M6.1 6.1l11.8 11.8M17.9 6.1 6.1 17.9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+    flame: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c4 0 7-2.7 7-6.5 0-3.4-2.5-5.8-4.7-8.5-.7-.9-1.3-1.8-1.6-2.9-2 2.2-3.4 4.2-3.4 6.1 0 1.2.5 2.1 1.3 2.7-1.5-.2-2.6-1.4-2.9-3.1C6.2 11 5 13.1 5 15.5 5 19.3 8 22 12 22Z" fill="currentColor"/></svg>`,
+    link: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.2 13.3a5 5 0 0 0 7.4.5l1.9-1.9a5 5 0 0 0-7.1-7.1L11.2 6M13.8 10.7a5 5 0 0 0-7.4-.5l-1.9 1.9a5 5 0 0 0 7.1 7.1l1.2-1.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    check: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`
+  };
+
+  const INITIAL_STATUS = "Ordne die fünf Begriffe den passenden Stellen im Bild zu.";
+  const STATUS_GLYPH = { info: "i", good: "✓", bad: "!" };
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const byKey = new Map(TASKS.map(t => [t.key, t]));
+
+  const stage = $("#stage");
+  const zonesEl = $("#zones");
+  const chipsEl = $("#chips");
+  const fxEl = $("#fx");
+  const tray = $("#tray");
+  const playLayout = $("#playLayout");
+  const result = $("#result");
+  const scoreEl = $("#score");
+  const scoreValue = $("#scoreValue");
+  const foundLabel = $("#foundLabel");
+  const foundCount = $("#foundCount");
+  const errorCount = $("#errorCount");
+  const progress = $("#progress");
+  const progressBar = $("#progressBar");
+  const status = $("#status");
+  const statusText = $("#statusText");
+  const statusGlyph = $("#statusGlyph");
+  const resultTitle = $("#resultTitle");
+  const resultText = $("#resultText");
+  const finalScore = $("#finalScore");
+
+  const state = {
+    score: 0,
+    found: 0,
+    errors: 0,
+    selected: null,
+    solved: new Set()
+  };
+
+  const timers = new Set();
+  function later(fn, ms) {
+    const id = window.setTimeout(() => {
+      timers.delete(id);
+      fn();
+    }, ms);
+    timers.add(id);
+    return id;
+  }
+  function clearTimers() {
+    timers.forEach(id => window.clearTimeout(id));
+    timers.clear();
+  }
+
+  function shuffle(list) {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function setStatus(text, tone = "info") {
+    status.dataset.tone = tone;
+    statusText.textContent = text;
+    statusGlyph.textContent = STATUS_GLYPH[tone] || "i";
+  }
+
+  function zoneFor(key) {
+    return zonesEl.querySelector(`.zone[data-key="${key}"]`);
+  }
+  function chipFor(key) {
+    return chipsEl.querySelector(`.chip[data-key="${key}"]`);
+  }
+
+  /* ---------- Aufbau ---------- */
+  function buildZones() {
+    TASKS.forEach(task => {
+      const pos = ZONE_POS[task.key];
+      const zone = document.createElement("div");
+      zone.className = `zone zone--${task.key}`;
+      zone.dataset.key = task.key;
+      zone.style.cssText = `left:${pos.left};top:${pos.top};width:${pos.width};height:${pos.height};--c:${task.color};--soft:${task.soft};`;
+      zone.setAttribute("role", "button");
+      zone.setAttribute("tabindex", "0");
+      zone.setAttribute("aria-label", `Feld ${task.num}, ${task.zoneHint}: Begriff hier ablegen`);
+      zone.innerHTML = `
+        <span class="zone-num" aria-hidden="true">${task.num}</span>
+        <span class="zone-ghost" aria-hidden="true">${ICONS[task.icon]}</span>
+        <span class="zone-inner">
+          <span class="zone-hint">${task.zoneHint}</span>
+          <span class="zone-drop">Begriff hier ablegen</span>
+        </span>
+        <span class="ok-badge" aria-hidden="true">${ICONS.check}</span>`;
+      zone.addEventListener("click", () => activateZone(zone));
+      zone.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          activateZone(zone);
+        }
+      });
+      zonesEl.appendChild(zone);
+    });
+  }
+
+  function buildChips() {
+    chipsEl.innerHTML = "";
+    shuffle(TASKS).forEach(task => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip";
+      chip.dataset.key = task.key;
+      chip.style.setProperty("--c", task.color);
+      chip.style.setProperty("--soft", task.soft);
+      chip.setAttribute("aria-pressed", "false");
+      chip.setAttribute("aria-label", `${task.title} ${task.sub}. Begriff auswählen`);
+      chip.innerHTML = `
+        <span class="ico" aria-hidden="true">${ICONS[task.icon]}</span>
+        <span class="chip-text"><strong>${task.title}</strong> <span>${task.sub}</span></span>`;
+      chip.addEventListener("pointerdown", onPointerDown);
+      chip.addEventListener("keydown", onChipKeyDown);
+      chipsEl.appendChild(chip);
+    });
+  }
+
+  function updateHud(bump = false) {
+    scoreEl.textContent = state.score;
+    foundCount.textContent = state.found;
+    errorCount.textContent = state.errors;
+    foundLabel.textContent = `${state.found} von ${TASKS.length} Zuordnungen`;
+    progressBar.style.width = `${(state.found / TASKS.length) * 100}%`;
+    progress.setAttribute("aria-valuenow", String(state.found));
+    if (bump) {
+      scoreValue.classList.remove("bump");
+      void scoreValue.offsetWidth;
+      scoreValue.classList.add("bump");
+    }
+  }
+
+  /* ---------- Auswahl per Tippen / Tastatur ---------- */
+  function clearSelection() {
+    chipsEl.querySelectorAll(".chip.selected").forEach(chip => {
+      chip.classList.remove("selected");
+      chip.setAttribute("aria-pressed", "false");
+    });
+    state.selected = null;
+  }
+
+  function toggleSelection(chip) {
+    if (!chip || state.solved.has(chip.dataset.key)) return;
+    const key = chip.dataset.key;
+    if (state.selected === key) {
+      clearSelection();
+      setStatus("Auswahl aufgehoben. Wähle einen Begriff oder ziehe ihn direkt ins Bild.", "info");
+      return;
+    }
+    clearSelection();
+    state.selected = key;
+    chip.classList.add("selected");
+    chip.setAttribute("aria-pressed", "true");
+    setStatus("Begriff ausgewählt. Tippe jetzt auf das passende Feld im Bild.", "info");
+  }
+
+  function onChipKeyDown(event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      toggleSelection(event.currentTarget);
+    }
+  }
+
+  function activateZone(zone) {
+    if (!zone || zone.classList.contains("solved")) return;
+    if (!state.selected) {
+      setStatus("Wähle zuerst unten einen Begriff aus – oder ziehe ihn direkt ins Feld.", "info");
+      chipsEl.classList.remove("nudge");
+      void chipsEl.offsetWidth;
+      chipsEl.classList.add("nudge");
+      return;
+    }
+    tryPlace(state.selected, zone);
+  }
+
+  /* ---------- Ziehen & Ablegen (Maus, Stift, Touch) ---------- */
+  let drag = null;
+
+  function onPointerDown(event) {
+    if (event.button !== undefined && event.button !== 0) return;
+    const chip = event.currentTarget;
+    if (state.solved.has(chip.dataset.key)) return;
+
+    event.preventDefault();
+    drag = {
+      chip,
+      key: chip.dataset.key,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+      ghost: null,
+      pointerId: event.pointerId
+    };
+    try { chip.setPointerCapture(event.pointerId); } catch (err) { /* ignorieren */ }
+    chip.addEventListener("pointermove", onPointerMove);
+    chip.addEventListener("pointerup", endDrag);
+    chip.addEventListener("pointercancel", endDrag);
+  }
+
+  function onPointerMove(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    if (!drag.moved) {
+      if (distance < 6) return;
+      drag.moved = true;
+      startGhost();
+    }
+    event.preventDefault();
+    moveGhost(event.clientX, event.clientY);
+    highlightZoneAt(event.clientX, event.clientY);
+  }
+
+  function startGhost() {
+    const rect = drag.chip.getBoundingClientRect();
+    const ghost = drag.chip.cloneNode(true);
+    ghost.classList.add("ghost");
+    ghost.removeAttribute("aria-pressed");
+    ghost.removeAttribute("aria-label");
+    ghost.setAttribute("aria-hidden", "true");
+    ghost.style.width = `${rect.width}px`;
+    ghost.style.left = `${rect.left + rect.width / 2}px`;
+    ghost.style.top = `${rect.top + rect.height / 2}px`;
+    document.body.appendChild(ghost);
+    drag.ghost = ghost;
+    drag.chip.classList.add("is-dragging");
+    document.body.style.cursor = "grabbing";
+  }
+
+  function moveGhost(x, y) {
+    if (!drag.ghost) return;
+    drag.ghost.style.left = `${x}px`;
+    drag.ghost.style.top = `${y}px`;
+  }
+
+  function zoneAtPoint(x, y) {
+    const element = document.elementFromPoint(x, y);
+    return element ? element.closest(".zone") : null;
+  }
+
+  function clearOverZones() {
+    zonesEl.querySelectorAll(".zone.over").forEach(zone => zone.classList.remove("over"));
+  }
+
+  function highlightZoneAt(x, y) {
+    clearOverZones();
+    const zone = zoneAtPoint(x, y);
+    if (zone && !zone.classList.contains("solved")) zone.classList.add("over");
+  }
+
+  function endDrag(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const { chip, key, moved, ghost } = drag;
+    const x = event.clientX;
+    const y = event.clientY;
+
+    chip.removeEventListener("pointermove", onPointerMove);
+    chip.removeEventListener("pointerup", endDrag);
+    chip.removeEventListener("pointercancel", endDrag);
+    chip.classList.remove("is-dragging");
+    document.body.style.cursor = "";
+    if (ghost) ghost.remove();
+    clearOverZones();
+
+    if (!moved) {
+      drag = null;
+      toggleSelection(chip);
+      return;
+    }
+
+    const zone = zoneAtPoint(x, y);
+    drag = null;
+
+    if (zone && !zone.classList.contains("solved")) {
+      tryPlace(key, zone);
+    } else {
+      setStatus("Lege den Begriff in eines der gestrichelten Felder.", "info");
+    }
+  }
+
+  /* ---------- Zuordnen & Bewerten ---------- */
+  function tryPlace(key, zone) {
+    const task = byKey.get(key);
+    if (!task || !zone || zone.classList.contains("solved")) return;
+    if (zone.dataset.key === key) {
+      handleCorrect(task, zone);
+    } else {
+      handleWrong(zone);
+    }
+  }
+
+  function handleWrong(zone) {
+    state.errors += 1;
+    state.score = Math.max(0, state.score - 5);
+    updateHud(true);
+
+    zone.classList.remove("wrong");
+    void zone.offsetWidth;
+    zone.classList.add("wrong");
+    later(() => zone.classList.remove("wrong"), 650);
+
+    floatPoints(zone, "−5", false);
+    setStatus("Das passt noch nicht. Schau dir den Pfeil an – wohin fließt die Energie?", "bad");
+  }
+
+  function handleCorrect(task, zone) {
+    const chip = chipFor(task.key);
+    if (!chip) return;
+
+    state.found += 1;
+    state.score = Math.min(100, state.score + 20);
+    state.solved.add(task.key);
+    clearSelection();
+
+    const placed = document.createElement("div");
+    placed.className = "chip placed";
+    placed.style.setProperty("--c", task.color);
+    placed.style.setProperty("--soft", task.soft);
+    placed.innerHTML = chip.innerHTML;
+    chip.remove();
+
+    zone.classList.add("solved");
+    zone.setAttribute("aria-disabled", "true");
+    zone.setAttribute("tabindex", "-1");
+    zone.setAttribute("aria-label", `Feld ${task.num}: ${task.title}, ${task.sub} – richtig zugeordnet`);
+    zone.appendChild(placed);
+
+    activateFlow(task.key);
+    updateHud(true);
+    floatPoints(zone, "+20", true);
+    setStatus(task.feedback, "good");
+
+    if (state.found === TASKS.length) {
+      later(complete, 800);
+    } else {
+      const next = chipsEl.querySelector(".chip");
+      if (next) next.focus({ preventScroll: true });
+    }
+  }
+
+  function activateFlow(key) {
+    const flow = stage.querySelector(`.flow[data-flow="${key}"]`);
+    const task = byKey.get(key);
+    if (!flow || !task) return;
+    flow.style.color = task.color;
+    flow.classList.add("active");
+  }
+
+  function resetFlows() {
+    stage.querySelectorAll(".flow").forEach(flow => {
+      flow.classList.remove("active");
+      flow.style.color = "#3e676b";
+    });
+  }
+
+  function floatPoints(zone, text, good) {
+    const zr = zone.getBoundingClientRect();
+    const sr = stage.getBoundingClientRect();
+    if (!sr.width || !sr.height) return;
+    const el = document.createElement("span");
+    el.className = `float-points ${good ? "good" : "bad"}`;
+    el.textContent = text;
+    el.style.left = `${((zr.left + zr.width / 2 - sr.left) / sr.width) * 100}%`;
+    el.style.top = `${((zr.top - sr.top) / sr.height) * 100}%`;
+    fxEl.appendChild(el);
+    later(() => el.remove(), 1150);
+  }
+
+  function fireConfetti() {
+    const colors = ["#c9f36a", "#e4ff9b", "#5eead4", "#7dd3fc", "#ff9b8a", "#c9b6ff", "#f3c969"];
+    for (let i = 0; i < 28; i++) {
+      const piece = document.createElement("i");
+      piece.className = "confetti";
+      piece.style.background = colors[i % colors.length];
+      piece.style.left = `${43 + Math.random() * 14}%`;
+      piece.style.top = `${42 + Math.random() * 12}%`;
+      piece.style.setProperty("--dx", `${(Math.random() * 2 - 1) * (140 + Math.random() * 320)}px`);
+      piece.style.setProperty("--dy", `${(Math.random() * 2 - 1) * (90 + Math.random() * 230)}px`);
+      piece.style.setProperty("--rot", `${(Math.random() * 2 - 1) * 520}deg`);
+      piece.style.animationDelay = `${Math.random() * 0.18}s`;
+      fxEl.appendChild(piece);
+      later(() => piece.remove(), 1900);
+    }
+  }
+
+  function complete() {
+    let title;
+    if (state.score === 100) title = "Perfekt – 100 Punkte!";
+    else if (state.score >= 90) title = "Sehr gut gemacht!";
+    else if (state.score >= 75) title = "Gut gemacht!";
+    else title = "Geschafft!";
+
+    let errorsText;
+    if (state.errors === 0) errorsText = "Und das ganz ohne Fehlversuch.";
+    else if (state.errors === 1) errorsText = "Ein Fehlversuch – stark gelöst.";
+    else errorsText = `${state.errors} Fehlversuche – trotzdem gut gelöst.`;
+
+    resultTitle.textContent = title;
+    resultText.textContent = `${errorsText} Nur etwa 20–25 % der aufgenommenen Energie werden zum Vorwärtskommen genutzt, der große Rest wird als Wärme abgegeben.`;
+    finalScore.textContent = state.score;
+    result.classList.remove("hidden");
+    tray.classList.add("hidden");
+    playLayout.classList.add("single");
+    setStatus("Alle fünf Energieflüsse sind zugeordnet. Super!", "good");
+    fireConfetti();
+    result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+    window.dispatchEvent(new CustomEvent("energiefluss:complete", {
+      detail: {
+        score: state.score,
+        maxScore: 100,
+        found: state.found,
+        errors: state.errors,
+        solved: Array.from(state.solved)
+      }
+    }));
+  }
+
+  /* ---------- Neu starten & Tipp ---------- */
+  function resetGame() {
+    clearTimers();
+    if (drag && drag.ghost) drag.ghost.remove();
+    if (drag && drag.chip) drag.chip.classList.remove("is-dragging");
+    drag = null;
+    document.body.style.cursor = "";
+    fxEl.innerHTML = "";
+
+    state.score = 0;
+    state.found = 0;
+    state.errors = 0;
+    state.selected = null;
+    state.solved.clear();
+
+    zonesEl.querySelectorAll(".zone").forEach(zone => {
+      zone.classList.remove("solved", "wrong", "over", "hint");
+      zone.removeAttribute("aria-disabled");
+      zone.setAttribute("tabindex", "0");
+      zone.querySelectorAll(".chip.placed").forEach(el => el.remove());
+      const task = byKey.get(zone.dataset.key);
+      if (task) {
+        zone.setAttribute("aria-label", `Feld ${task.num}, ${task.zoneHint}: Begriff hier ablegen`);
+      }
+    });
+
+    resetFlows();
+    result.classList.add("hidden");
+    resultTitle.textContent = "Alle Energieflüsse zugeordnet!";
+    resultText.textContent = "Nahrung liefert chemische Energie. In den Muskeln wird sie in Bewegung umgewandelt. Der größte Teil verlässt den Körper als Wärme.";
+    tray.classList.remove("hidden");
+    playLayout.classList.remove("single");
+    buildChips();
+    updateHud(false);
+    setStatus(INITIAL_STATUS, "info");
+  }
+
+  function giveHint() {
+    const task = TASKS.find(item => !state.solved.has(item.key));
+    if (!task) {
+      setStatus("Alle Begriffe sind bereits zugeordnet.", "good");
+      return;
+    }
+    const zone = zoneFor(task.key);
+    const chip = chipFor(task.key);
+    [zone, chip].forEach(el => {
+      if (!el) return;
+      el.classList.remove("hint");
+      void el.offsetWidth;
+      el.classList.add("hint");
+      later(() => el.classList.remove("hint"), 2800);
+    });
+    setStatus(`Tipp: ${task.hint}`, "info");
+  }
+
+  /* ---------- Start ---------- */
+  buildZones();
+  resetGame();
+
+  $("#resetBtn").addEventListener("click", resetGame);
+  $("#hintBtn").addEventListener("click", giveHint);
+  $("#againBtn").addEventListener("click", () => {
+    resetGame();
+    const first = chipsEl.querySelector(".chip");
+    if (first) first.focus({ preventScroll: true });
+  });
+
+  window.EnergieflussSpiel = {
+    reset: resetGame,
+    hint: giveHint,
+    getState: () => ({
+      score: state.score,
+      found: state.found,
+      errors: state.errors,
+      solved: Array.from(state.solved)
+    })
+  };
+})();
+</script>
+<script>
+(() => {
+  "use strict";
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const toNumber = (value, fallback = 0) => {
+    const num = Number(String(value).trim().replace(",", "."));
+    return Number.isFinite(num) ? num : fallback;
+  };
+  const formatters = {};
+  const fmt = (value, digits = 2) => {
+    if (!formatters[digits]) {
+      formatters[digits] = new Intl.NumberFormat("de-DE", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      });
+    }
+    return formatters[digits].format(Number.isFinite(value) ? value : 0);
+  };
+  const esc = value => String(value).replace(/[&<>"']/g, ch => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
+  ));
+
+  /* =========================================================
+     LEISTUNGSMESSUNG · 60 SEKUNDEN
+     ========================================================= */
+  const DURATION = 60;
+  const Y_MAX = 520;
+
+  const powerRange = $("#powerRange");
+  const powerValue = $("#powerValue");
+  const powerCaption = $("#powerCaption");
+  const runBtn = $("#runBtn");
+  const runBtnLabel = $("#runBtnLabel");
+  const chartResetBtn = $("#chartResetBtn");
+  const speedToggle = $("#speedToggle");
+  const chart = $("#powerChart");
+  const chartEmpty = $("#chartEmpty");
+  const runTime = $("#runTime");
+  const runProgress = $("#runProgress");
+  const runProgressBar = $("#runProgressBar");
+  const statNow = $("#statNow");
+  const statAvg = $("#statAvg");
+  const statEnergy = $("#statEnergy");
+  const statWh = $("#statWh");
+  const runAnnounce = $("#runAnnounce");
+  const ctx = chart.getContext("2d");
+
+  const run = {
+    running: false,
+    elapsed: 0,
+    speed: 1,
+    setpoint: 150,
+    energy: 0,
+    noise: 0,
+    samples: [],
+    timer: 0,
+    lastTs: 0
+  };
+
+  function resetRunStats() {
+    statAvg.innerHTML = "– <em>W</em>";
+    statEnergy.innerHTML = "– <em>kJ</em>";
+    statWh.innerHTML = "– <em>Wh</em>";
+  }
+
+  function currentPower() {
+    run.noise += (Math.random() - 0.5) * 0.10;
+    run.noise = clamp(run.noise, -0.07, 0.07);
+    const wobble = Math.sin(run.elapsed * 1.6) * 0.012;
+    return clamp(run.setpoint * (1 + run.noise + wobble), 5, Y_MAX + 100);
+  }
+
+  function updateSetpointUi() {
+    run.setpoint = clamp(toNumber(powerRange.value, 150), 25, 500);
+    powerValue.textContent = String(Math.round(run.setpoint));
+    const pct = ((run.setpoint - 25) / (500 - 25)) * 100;
+    powerRange.style.setProperty("--fill", `${pct}%`);
+    if (!run.running) {
+      statNow.innerHTML = `${Math.round(run.setpoint)} <em>W</em>`;
+      powerCaption.textContent = "eingestellte Leistung";
+    } else {
+      powerCaption.textContent = "Leistung im Lauf angepasst";
+    }
+    drawChart();
+  }
+
+  function updateRunUi(power) {
+    const t = Math.min(run.elapsed, DURATION);
+    const secs = Math.floor(t);
+    runTime.textContent = `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")} / 01:00`;
+    runProgressBar.style.width = `${(t / DURATION) * 100}%`;
+    runProgress.setAttribute("aria-valuenow", String(Math.round(t)));
+    statNow.innerHTML = `${Math.round(power)} <em>W</em>`;
+    if (run.elapsed > 0.25) {
+      statAvg.innerHTML = `${Math.round(run.energy / run.elapsed)} <em>W</em>`;
+      statEnergy.innerHTML = `${fmt(run.energy / 1000, 2)} <em>kJ</em>`;
+      statWh.innerHTML = `${fmt(run.energy / 3600, 2)} <em>Wh</em>`;
+    }
+  }
+
+  function startRun() {
+    if (run.running) return;
+    run.elapsed = 0;
+    run.energy = 0;
+    run.noise = 0;
+    run.samples = [];
+    run.running = true;
+    run.lastTs = performance.now();
+    resetRunStats();
+    chartEmpty.classList.add("hidden");
+    runBtnLabel.textContent = "Stoppen";
+    powerCaption.textContent = "Messung läuft";
+    runAnnounce.textContent = "Messung gestartet.";
+    updateRunUi(run.setpoint);
+    run.timer = window.setInterval(tick, 50);
+  }
+
+  function stopRun() {
+    run.running = false;
+    if (run.timer) window.clearInterval(run.timer);
+    run.timer = 0;
+    runBtnLabel.textContent = run.elapsed > 0 ? "Neu starten" : "60 s starten";
+    powerCaption.textContent = run.elapsed > 0 ? "Messung gestoppt" : "eingestellte Leistung";
+    if (run.elapsed > 0) runAnnounce.textContent = "Messung gestoppt.";
+    updateRunUi(run.setpoint);
+    drawChart();
+  }
+
+  function finishRun() {
+    run.running = false;
+    if (run.timer) window.clearInterval(run.timer);
+    run.timer = 0;
+    run.elapsed = DURATION;
+    runBtnLabel.textContent = "Neu starten";
+    powerCaption.textContent = "Messung abgeschlossen";
+    chartEmpty.classList.add("hidden");
+    runAnnounce.textContent = `Messung beendet: 60 Sekunden, Mittelwert ${Math.round(run.energy / DURATION)} Watt, Energie ${fmt(run.energy / 1000, 1)} Kilojoule.`;
+    updateRunUi(run.setpoint);
+    drawChart();
+  }
+
+  function tick() {
+    if (!run.running) return;
+    const now = performance.now();
+    const realDt = Math.min((now - run.lastTs) / 1000, 0.5);
+    run.lastTs = now;
+    const dt = realDt * run.speed;
+    if (dt <= 0) return;
+
+    const step = Math.min(dt, DURATION - run.elapsed);
+    run.elapsed += step;
+    const power = currentPower();
+    run.energy += power * step;
+    run.samples.push({ t: run.elapsed, p: power });
+    if (run.samples.length > 7200) run.samples.shift();
+
+    updateRunUi(power);
+    drawChart();
+
+    if (run.elapsed >= DURATION - 0.0001) finishRun();
+  }
+
+  function drawChart() {
+    const cssW = chart.clientWidth;
+    const cssH = chart.clientHeight;
+    if (!cssW || !cssH) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const pixelW = Math.round(cssW * dpr);
+    const pixelH = Math.round(cssH * dpr);
+    if (chart.width !== pixelW || chart.height !== pixelH) {
+      chart.width = pixelW;
+      chart.height = pixelH;
+    }
+
+    const g = ctx;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, cssW, cssH);
+
+    const pad = { l: 46, r: 14, t: 16, b: 26 };
+    const plotW = cssW - pad.l - pad.r;
+    const plotH = cssH - pad.t - pad.b;
+    if (plotW <= 0 || plotH <= 0) return;
+
+    const x = t => pad.l + (t / DURATION) * plotW;
+    const y = p => pad.t + (1 - clamp(p, 0, Y_MAX) / Y_MAX) * plotH;
+
+    g.font = '10px "Segoe UI", system-ui, sans-serif';
+    g.lineWidth = 1;
+
+    // Gitter
+    g.strokeStyle = "rgba(36,81,88,.72)";
+    g.fillStyle = "#7f9a95";
+    g.textAlign = "right";
+    g.textBaseline = "middle";
+    for (let watt = 0; watt <= Y_MAX - 20; watt += 100) {
+      const yy = Math.round(y(watt)) + 0.5;
+      g.beginPath();
+      g.moveTo(pad.l, yy);
+      g.lineTo(cssW - pad.r, yy);
+      g.stroke();
+      g.fillText(`${watt} W`, pad.l - 8, yy);
+    }
+
+    g.textAlign = "center";
+    g.textBaseline = "top";
+    for (let sec = 0; sec <= DURATION; sec += 10) {
+      const xx = Math.round(x(sec)) + 0.5;
+      g.beginPath();
+      g.moveTo(xx, pad.t);
+      g.lineTo(xx, cssH - pad.b);
+      g.stroke();
+      g.fillStyle = "#7f9a95";
+      g.fillText(`${sec} s`, xx, cssH - pad.b + 7);
+    }
+
+    // Sollwert
+    const sy = Math.round(y(run.setpoint)) + 0.5;
+    g.save();
+    g.setLineDash([5, 6]);
+    g.strokeStyle = "rgba(201,243,106,.45)";
+    g.beginPath();
+    g.moveTo(pad.l, sy);
+    g.lineTo(cssW - pad.r, sy);
+    g.stroke();
+    g.restore();
+    g.fillStyle = "rgba(201,243,106,.80)";
+    g.textAlign = "left";
+    g.textBaseline = "bottom";
+    g.fillText(`${Math.round(run.setpoint)} W Soll`, pad.l + 6, sy - 4);
+
+    const samples = run.samples;
+    if (!samples.length) return;
+
+    const stride = Math.max(1, Math.ceil(samples.length / 420));
+    const points = [];
+    for (let i = 0; i < samples.length; i += stride) points.push(samples[i]);
+    const last = samples[samples.length - 1];
+    if (points[points.length - 1] !== last) points.push(last);
+
+    // Fläche unter der Kurve
+    g.beginPath();
+    g.moveTo(x(points[0].t), y(points[0].p));
+    for (let i = 1; i < points.length; i++) g.lineTo(x(points[i].t), y(points[i].p));
+    g.lineTo(x(last.t), y(0));
+    g.lineTo(x(points[0].t), y(0));
+    g.closePath();
+    const fillGrad = g.createLinearGradient(0, pad.t, 0, cssH - pad.b);
+    fillGrad.addColorStop(0, "rgba(201,243,106,.30)");
+    fillGrad.addColorStop(1, "rgba(201,243,106,0)");
+    g.fillStyle = fillGrad;
+    g.fill();
+
+    // Kurve
+    g.beginPath();
+    g.moveTo(x(points[0].t), y(points[0].p));
+    for (let i = 1; i < points.length; i++) g.lineTo(x(points[i].t), y(points[i].p));
+    g.save();
+    g.strokeStyle = "#c9f36a";
+    g.lineWidth = 2.4;
+    g.lineJoin = "round";
+    g.lineCap = "round";
+    g.shadowColor = "rgba(201,243,106,.55)";
+    g.shadowBlur = 10;
+    g.stroke();
+    g.restore();
+
+    // aktueller Punkt
+    g.save();
+    g.beginPath();
+    g.arc(x(last.t), y(last.p), 4, 0, Math.PI * 2);
+    g.fillStyle = "#e4ff9b";
+    g.shadowColor = "rgba(201,243,106,.85)";
+    g.shadowBlur = 12;
+    g.fill();
+    g.restore();
+  }
+
+  function resetChart() {
+    stopRun();
+    run.elapsed = 0;
+    run.energy = 0;
+    run.noise = 0;
+    run.samples = [];
+    runBtnLabel.textContent = "60 s starten";
+    powerCaption.textContent = "eingestellte Leistung";
+    chartEmpty.classList.remove("hidden");
+    resetRunStats();
+    runAnnounce.textContent = "";
+    updateRunUi(run.setpoint);
+    drawChart();
+  }
+
+  powerRange.addEventListener("input", updateSetpointUi);
+  runBtn.addEventListener("click", () => {
+    if (run.running) stopRun();
+    else startRun();
+  });
+  chartResetBtn.addEventListener("click", resetChart);
+  speedToggle.addEventListener("change", () => {
+    run.speed = speedToggle.checked ? 10 : 1;
+  });
+
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(() => drawChart()).observe(chart);
+  } else {
+    window.addEventListener("resize", drawChart);
+  }
+
+  /* =========================================================
+     HOCHRECHNUNG · VERBRAUCH & KOSTEN
+     ========================================================= */
+  const UNIT_OPTIONS = [
+    { value: "minDay", label: "Minuten / Tag", factor: 365 / 60 },
+    { value: "hourDay", label: "Stunden / Tag", factor: 365 },
+    { value: "dayMonth", label: "Tage / Monat", factor: 24 * 12 },
+    { value: "monthYear", label: "Monate / Jahr", factor: 730 },
+    { value: "year", label: "Jahre (Vollbetrieb)", factor: 8760 }
+  ];
+  const unitFactor = value => (UNIT_OPTIONS.find(unit => unit.value === value) || UNIT_OPTIONS[1]).factor;
+
+  const calcRows = $("#calcRows");
+  const priceInput = $("#priceInput");
+  const priceEcho = $("#priceEcho");
+  const sumHours = $("#sumHours");
+  const sumKwh = $("#sumKwh");
+  const sumCost = $("#sumCost");
+  const perStudentKwh = $("#perStudentKwh");
+  const perStudentCost = $("#perStudentCost");
+  const poolRows = $("#poolRows");
+  const addRowBtn = $("#addRowBtn");
+
+  let rows = [
+    { name: "LED-Fahrradlicht", power: 8, duration: 2, unit: "hourDay" },
+    { name: "E-Bike-Akku laden", power: 250, duration: 1.5, unit: "hourDay" },
+    { name: "Laptop", power: 65, duration: 4, unit: "hourDay" }
+  ];
+
+  const STUDENT_COUNTS = [50, 100, 200, 300, 400];
+  const poolCells = [];
+
+  function unitOptions(selected) {
+    return UNIT_OPTIONS.map(unit =>
+      `<option value="${unit.value}"${unit.value === selected ? " selected" : ""}>${unit.label}</option>`
+    ).join("");
+  }
+
+  function buildPool() {
+    poolRows.innerHTML = STUDENT_COUNTS.map(count => `
+      <tr>
+        <td>${fmt(count, 0)}</td>
+        <td class="kwh"></td>
+        <td class="cost"></td>
+        <td class="day"></td>
+      </tr>
+    `).join("");
+    poolCells.length = 0;
+    poolRows.querySelectorAll("tr").forEach(tr => {
+      poolCells.push({ kwh: $(".kwh", tr), cost: $(".cost", tr), day: $(".day", tr) });
+    });
+  }
+
+  function renderRows() {
+    calcRows.innerHTML = "";
+    rows.forEach((row, index) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input class="field" type="text" value="${esc(row.name)}" aria-label="Gerät oder Aktivität, Zeile ${index + 1}"></td>
+        <td><input class="field row-power" type="number" min="0" max="100000" step="1" value="${row.power}" inputmode="decimal" aria-label="Leistung Zeile ${index + 1} in Watt"></td>
+        <td><input class="field row-duration" type="number" min="0" max="100000" step="0.1" value="${row.duration}" inputmode="decimal" aria-label="Dauer Zeile ${index + 1}"></td>
+        <td><select class="field row-unit" aria-label="Zeitraum Zeile ${index + 1}">${unitOptions(row.unit)}</select></td>
+        <td class="num hours"></td>
+        <td class="num kwh"></td>
+        <td class="num cost"></td>
+        <td><button class="row-del" type="button" aria-label="Zeile ${index + 1} entfernen" title="Zeile entfernen">×</button></td>
+      `;
+
+      const nameInput = $("input[type=text]", tr);
+      const powerInput = $(".row-power", tr);
+      const durationInput = $(".row-duration", tr);
+      const unitSelect = $(".row-unit", tr);
+      const delBtn = $(".row-del", tr);
+
+      nameInput.addEventListener("input", () => {
+        rows[index].name = nameInput.value;
+      });
+      powerInput.addEventListener("input", () => {
+        rows[index].power = Math.max(0, toNumber(powerInput.value, 0));
+        recalc();
+      });
+      durationInput.addEventListener("input", () => {
+        rows[index].duration = Math.max(0, toNumber(durationInput.value, 0));
+        recalc();
+      });
+      unitSelect.addEventListener("change", () => {
+        rows[index].unit = unitSelect.value;
+        recalc();
+      });
+      delBtn.disabled = rows.length <= 1;
+      delBtn.addEventListener("click", () => {
+        if (rows.length <= 1) return;
+        rows.splice(index, 1);
+        renderRows();
+        recalc();
+      });
+
+      calcRows.appendChild(tr);
+    });
+  }
+
+  function currentPrice() {
+    const raw = priceInput.value.trim();
+    if (raw === "") return 0;
+    return clamp(toNumber(raw, 0), 0, 200);
+  }
+
+  function recalc() {
+    const price = currentPrice();
+    let totalHours = 0;
+    let totalKwh = 0;
+    const rowEls = calcRows.querySelectorAll("tr");
+
+    rows.forEach((row, index) => {
+      const factor = unitFactor(row.unit);
+      const power = Math.max(0, toNumber(row.power, 0));
+      const duration = Math.max(0, toNumber(row.duration, 0));
+      const hours = duration * factor;
+      const kwh = (power / 1000) * hours;
+      totalHours += hours;
+      totalKwh += kwh;
+
+      const tr = rowEls[index];
+      if (!tr) return;
+      $(".hours", tr).textContent = fmt(hours, hours >= 100 ? 0 : 1);
+      $(".kwh", tr).textContent = fmt(kwh, 2);
+      $(".cost", tr).textContent = `${fmt((kwh * price) / 100, 2)} €`;
+    });
+
+    const totalCost = (totalKwh * price) / 100;
+    sumHours.textContent = fmt(totalHours, 0);
+    sumKwh.textContent = `${fmt(totalKwh, 2)} kWh`;
+    sumCost.textContent = `${fmt(totalCost, 2)} €`;
+    perStudentKwh.textContent = `${fmt(totalKwh, 2)} kWh`;
+    perStudentCost.textContent = `${fmt(totalCost, 2)} €`;
+    priceEcho.textContent = `${fmt(price, price % 1 === 0 ? 0 : 1)} ct/kWh`;
+
+    STUDENT_COUNTS.forEach((count, index) => {
+      const cells = poolCells[index];
+      if (!cells) return;
+      const kwh = totalKwh * count;
+      cells.kwh.textContent = `${fmt(kwh, 0)} kWh`;
+      cells.cost.textContent = `${fmt(totalCost * count, 2)} €`;
+      cells.day.textContent = `${fmt(kwh / 365, 2)} kWh`;
+    });
+  }
+
+  priceInput.addEventListener("input", recalc);
+  priceInput.addEventListener("blur", () => {
+    const value = priceInput.value.trim() === "" ? 40 : clamp(toNumber(priceInput.value, 40), 0, 200);
+    priceInput.value = String(value);
+    recalc();
+  });
+
+  addRowBtn.addEventListener("click", () => {
+    rows.push({ name: "Neue Nutzung", power: 50, duration: 1, unit: "hourDay" });
+    renderRows();
+    recalc();
+    const last = calcRows.querySelector("tr:last-child input[type=text]");
+    if (last) {
+      last.focus();
+      last.select();
+    }
+  });
+
+  /* =========================================================
+     INIT & API
+     ========================================================= */
+  updateSetpointUi();
+  resetRunStats();
+  updateRunUi(run.setpoint);
+  drawChart();
+  requestAnimationFrame(drawChart);
+
+  buildPool();
+  renderRows();
+  recalc();
+
+  window.EnergiePanel = {
+    start: startRun,
+    stop: stopRun,
+    reset: resetChart,
+    setSpeed: value => { run.speed = clamp(Number(value) || 1, 1, 60); },
+    getState: () => ({
+      running: run.running,
+      elapsed: +run.elapsed.toFixed(2),
+      setpoint: run.setpoint,
+      energyJ: Math.round(run.energy),
+      averageW: run.elapsed > 0 ? +(run.energy / run.elapsed).toFixed(1) : 0,
+      samples: run.samples.length
+    })
+  };
+
+  window.EnergieHochrechnung = {
+    getState: () => ({
+      priceCt: currentPrice(),
+      rows: rows.map(row => {
+        const hours = row.duration * unitFactor(row.unit);
+        return { ...row, hours, kwh: (row.power / 1000) * hours };
+      }),
+      totalKwh: rows.reduce((sum, row) => {
+        const hours = row.duration * unitFactor(row.unit);
+        return sum + (row.power / 1000) * hours;
+      }, 0)
+    }),
+    setPrice: value => {
+      priceInput.value = String(value);
+      recalc();
+    }
+  };
+})();
+</script>
+</body>
+</html>
